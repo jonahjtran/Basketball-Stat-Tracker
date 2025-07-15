@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Arc, Polygon, Wedge
+from matplotlib.colors import LinearSegmentedColormap, Normalize
 import numpy as np
 import pandas as pd
 from enum import Enum, auto
@@ -21,8 +22,10 @@ class ShotZone(Enum):
     PAINT_C = auto()
     PAINT_R = auto()
 
-class Heatmap():
+
+class Heatmap:
     def __init__(self):
+        # 1) stats table
         self.stats = pd.DataFrame(
             0,
             index=list(ShotZone),
@@ -30,96 +33,85 @@ class Heatmap():
             dtype=float
         )
 
-         #    coordinates are in feet, origin at hoop, y→half-court
-        self.zone_shapes = {
-            # three-point baseline strips
-            ShotZone.THREE_L:  Polygon([(-25,0),(-22,0),(-22,14),(-25,14)]),
-            ShotZone.THREE_LC: Polygon([(-22,0),(-8,0),(-8,14),(-22,14)]),
-            ShotZone.THREE_C:  Polygon([(-8,0),(8,0),(8,14),(-8,14)]),
-            ShotZone.THREE_RC: Polygon([(8,0),(22,0),(22,14),(8,14)]),
-            ShotZone.THREE_R:  Polygon([(22,0),(25,0),(25,14),(22,14)]),
+    # parameters: zone of shot, boolean indicating whether shot was a make or miss
+    # adds events to self.stats
+    def add_event(self, zone: ShotZone, made: bool):
+        self.stats.at[zone, 'attempts'] += 1     # increment attempts column for zone
+        if made:
+            self.stats.at[zone, 'makes'] += 1    # increment makes column for zone
 
-            # mid-range (between 3-pt line and free-throw line)
-            ShotZone.MID_L:   Polygon([(-25,14),(-8,14),(-8,19),(-25,19)]),
-            ShotZone.MID_LC:  Polygon([(-8,14),(-3,14),(-3,19),(-8,19)]),
-            ShotZone.MID_C:   Polygon([(-3,14),(3,14),(3,19),(-3,19)]),
-            ShotZone.MID_RC:  Polygon([(3,14),(8,14),(8,19),(3,19)]),
-            ShotZone.MID_R:   Polygon([(8,14),(25,14),(25,19),(8,19)]),
+        new_attempts = self.stats.at[zone, 'attempts']
+        new_makes = self.stats.at[zone, 'makes']
 
-            # paint area subdivisions
-            ShotZone.PAINT_L: Polygon([(-8,0),(-3,0),(-3,19),(-8,19)]),
-            ShotZone.PAINT_C: Polygon([(-3,0),(3,0),(3,19),(-3,19)]),
-            ShotZone.PAINT_R: Polygon([(3,0),(8,0),(8,19),(3,19)]),
+        if new_attempts != 0:
+            self.stats.at[zone, 'pct'] = (new_makes/new_attempts) * 100
+        else:
+            self.stats.at[zone, 'pct'] = new_makes/new_attempts
+        
 
-            # restricted area (under the basket)
-            ShotZone.REST_AREA: Wedge((0,0), 4, 0, 180)
+
+
+    @staticmethod
+    def _draw_court(ax, color='black', lw=2, outer_lines=False):
+        # --- paste your draw_court body here, but rename to _draw_court and remove plt.gca() logic ---
+        hoop = Circle((0, 0), radius=7.5, linewidth=lw, color=color, fill=False)
+        backboard = Rectangle((-30, -7.5), 60, -1, linewidth=lw, color=color)
+        outer_box = Rectangle((-80, -47.5), 160, 190, linewidth=lw, color=color, fill=False)
+        inner_box = Rectangle((-60, -47.5), 120, 190, linewidth=lw, color=color, fill=False)
+        top_ft = Arc((0, 142.5), 120, 120, theta1=0, theta2=180, linewidth=lw, color=color, fill=False)
+        bot_ft = Arc((0, 142.5), 120, 120, theta1=180, theta2=0, linewidth=lw, color=color, linestyle='dashed')
+        restricted = Arc((0, 0), 80, 80, theta1=0, theta2=180, linewidth=lw, color=color)
+        corner_a = Rectangle((-220, -47.5), 0, 140, linewidth=lw, color=color)
+        corner_b = Rectangle((220, -47.5), 0, 140, linewidth=lw, color=color)
+        three_arc = Arc((0, 0), 475, 475, theta1=22, theta2=158, linewidth=lw, color=color)
+        center_outer = Arc((0, 422.5), 120, 120, theta1=180, theta2=0, linewidth=lw, color=color)
+        center_inner = Arc((0, 422.5), 40, 40, theta1=180, theta2=0, linewidth=lw, color=color)
+
+        elems = [hoop, backboard, outer_box, inner_box,
+                 top_ft, bot_ft, restricted,
+                 corner_a, corner_b, three_arc,
+                 center_outer, center_inner]
+        if outer_lines:
+            outer = Rectangle((-250, -47.5), 500, 470, linewidth=lw, color=color, fill=False)
+            elems.append(outer)
+
+        for e in elems:
+            ax.add_patch(e)
+        return ax
+
+    def plot(self, ax=None, cmap='Reds', alpha=0.6):
+        """Draw court + overlay heatmap based on self.stats['pct']."""
+        if ax is None:
+            fig, ax = plt.subplots(figsize=(6, 11))
+        # 1) draw court
+        self._draw_court(ax, color='grey', lw=1, outer_lines=True)
+
+        # 2) Define the shot zones as polygons or bounding boxes
+        self.zone_polygons = {
+            'MID_L': np.array([[-250, 140], [-80, 140], [-80, 47.5], [-250, 47.5]]),
+            'MID_LC': np.array([[-80, 140], [-40, 140], [-40, 47.5], [-80, 47.5]]),
+            'MID_C': np.array([[-40, 140], [40, 140], [40, 47.5], [-40, 47.5]]),
+            'MID_RC': np.array([[40, 140], [80, 140], [80, 47.5], [40, 47.5]]),
+            'MID_R': np.array([[80, 140], [250, 140], [250, 47.5], [80, 47.5]]),
+            'THREE_L': np.array([[-250, 422.5], [-220, 422.5], [-220, 140], [-250, 140]]),
+            'THREE_LC': np.array([[-220, 422.5], [-80, 422.5], [-80, 140], [-220, 140]]),
+            'THREE_C': np.array([[-80, 422.5], [80, 422.5], [80, 140], [-80, 140]]),
+            'THREE_RC': np.array([[80, 422.5], [220, 422.5], [220, 140], [80, 140]]),
+            'THREE_R': np.array([[220, 422.5], [250, 422.5], [250, 140], [220, 140]]),
+            'REST_AREA': np.array([[-80, 47.5], [80, 47.5], [80, -47.5], [-80, -47.5]]),
+            'PAINT_L': np.array([[-80, 47.5], [-60, 47.5], [-60, -47.5], [-80, -47.5]]),
+            'PAINT_C': np.array([[-60, 47.5], [60, 47.5], [60, -47.5], [-60, -47.5]]),
+            'PAINT_R': np.array([[60, 47.5], [80, 47.5], [80, -47.5], [60, -47.5]])
         }
 
-        # returns color of a shot zone given a field-goal percentage
-        def cmap(pct):
-            if pct >= 0.45: return '#D62728'   # hot
-            if pct <= 0.35: return '#1F77B4'   # cold
-            return '#7F7F7F'                   # neutral
-        self.cmap = cmap
+        for zone_name, verts in self.zone_polygons.items():
+            pct = self.stats.at[zone_name, 'pct']
+            poly = plt.Polygon(verts, facecolor=plt.cm.get_cmap(cmap)(pct), alpha=alpha)
+            ax.add_patch(poly)
 
-         # 4) build Matplotlib fig/ax and draw the court lines
-        self.fig, self.ax = plt.subplots(figsize=(12,8))
-        self.ax.set_facecolor('#222222')
-        self._draw_base_court()
-
-        # 5) turn each shape into a patch, color it, and add to axes
-        self.zone_patches = {}
-        for zone, shape in self.zone_shapes.items():
-            # set initial facecolor = neutral (pct=0)
-            shape.set_facecolor(self.cmap(0.0))
-            shape.set_edgecolor('white')
-            shape.set_linewidth(1)
-            self.ax.add_patch(shape)
-            self.zone_patches[zone] = shape
-
-        # 6) finalize
-        self.ax.set_xlim(-25,25)
-        self.ax.set_ylim(0,47)
-        self.ax.axis('off')
-        plt.tight_layout()
-
-
-    def _draw_base_court(self):
-        """Overlay all the standard white court lines once."""
-        lw, lc = 2, 'white'
-        ax = self.ax
-        ax.add_patch(Circle((0,0), 0.75, fill=False, color=lc, linewidth=lw))            # hoop
-        ax.add_patch(Rectangle((-3,-0.75), 6, -0.125, color=lc, linewidth=lw))           # backboard
-        ax.add_patch(Rectangle((-8,0), 16,19, fill=False, color=lc, linewidth=lw))       # outer paint
-        ax.add_patch(Rectangle((-6,0), 12,19, fill=False, color=lc, linewidth=lw))       # inner paint
-        ax.add_patch(Arc((0,19), 12,12, theta1=0,   theta2=180, color=lc, linewidth=lw))
-        ax.add_patch(Arc((0,19), 12,12, theta1=180, theta2=360, color=lc, linewidth=lw, linestyle='dashed'))
-        ax.add_patch(Arc((0,0),   8, 8,  theta1=0,   theta2=180, color=lc, linewidth=lw))  # restricted arc
-        ax.add_patch(Rectangle((-22,0), 0,14, color=lc, linewidth=lw))                    # 3-pt side lines
-        ax.add_patch(Rectangle((22,0),  0,14, color=lc, linewidth=lw))
-        ax.add_patch(Arc((0,0), 95,95, theta1=22, theta2=158, color=lc, linewidth=lw))    # 3-pt arc
-
-
-    def update_shot(self, zone: ShotZone, made: bool):
-        """Record one shot in `zone` (True=make, False=miss)."""
-        s = self.stats[zone]
-        s['attempts'] += 1
-        s['makes']    += int(made)
-        s['pct']       = s['makes'] / s['attempts']
-
-
-    def render(self):
-        """Recolor all zones by their current pct and redraw."""
-        for zone, patch in self.zone_patches.items():
-            pct = self.stats[zone]['pct']
-            patch.set_facecolor(self.cmap(pct))
-        self.fig.canvas.draw()  
-
-
-    def get_image(self) -> np.ndarray:
-        """Return an (H, W, 3) uint8 RGB array of the current court+heatmap."""
-        self.fig.canvas.draw()
-        w,h = self.fig.canvas.get_width_height()
-        buf = self.fig.canvas.tostring_rgb()
-        return np.frombuffer(buf, dtype=np.uint8).reshape(h, w, 3)
-
+        # 3) set your axes limits and aspect
+        ax.set_xlim(-250, 250)
+        ax.set_ylim(-47.5, 422.5)
+        ax.set_aspect('equal')
+        ax.axis('off')
+        return ax
