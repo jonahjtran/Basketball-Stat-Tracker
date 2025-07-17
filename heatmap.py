@@ -97,10 +97,15 @@ class Heatmap:
     def render_with_hex(self, gridsize=20, mincnt=1):
         # 1. Draw your court as you already do
         fig, ax = plt.subplots(figsize=(6, 5))
-        self.draw_court(ax)
+        self._draw_court(ax)
 
         ax.set_xlim(-250, 250)
         ax.set_ylim(-47.5, 422.5)
+
+        x_min, x_max = ax.get_xlim()
+        y_min, y_max = ax.get_ylim()
+        extent = (x_min, x_max, y_min, y_max)
+
         ax.invert_yaxis()
 
         # 2. Filter out only the shot events and split makes vs. misses
@@ -110,10 +115,7 @@ class Heatmap:
         ys_missed = [e.y for e in self.events if e.action.startswith("missed")]
 
         # 3. Grab the exact court extents so your hexbins line up perfectly
-        x0, x1 = ax.get_xlim()
-        y0, y1 = ax.get_ylim()
-        extent = (x0, x1, y0, y1)
-
+       
         # 4a. Plot made‐shot density in reds
         hb_made = ax.hexbin(
             xs_made, ys_made,
@@ -134,7 +136,6 @@ class Heatmap:
             alpha=0.6
         )
 
-        # 5. Tidy up
         ax.axis("off")
         plt.tight_layout()
         return fig
