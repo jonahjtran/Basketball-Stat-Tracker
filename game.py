@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 from datetime import datetime
 from enum import Enum, auto
-from analytics import calculate_fg_percentage
+
+from analytics import calculate_fg_percentage, define_shot_zone
+from event import Action
 
 
 class ShotZone(Enum):
@@ -21,9 +23,10 @@ class ShotZone(Enum):
     PAINT_C = auto()
     PAINT_R = auto()
 
-
+# holds game stats for specific player during specific game
 class Game():
     def __init__(self):
+        self.player_id = None
         self.shot_att = 0
         self.shot_avr = None
         self.points = 0
