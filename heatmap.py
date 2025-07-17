@@ -6,23 +6,6 @@ import pandas as pd
 from enum import Enum, auto
 
 
-class ShotZone(Enum):
-    MID_L = auto()
-    MID_LC = auto()
-    MID_C = auto()
-    MID_RC = auto()
-    MID_R = auto()
-    THREE_L = auto()
-    THREE_LC = auto()
-    THREE_C = auto()
-    THREE_RC = auto()
-    THREE_R = auto()
-    REST_AREA = auto()
-    PAINT_L = auto()
-    PAINT_C = auto()
-    PAINT_R = auto()
-
-
 class Heatmap:
     def __init__(self):
         # 1) stats table
@@ -86,24 +69,6 @@ class Heatmap:
         # 1) draw court
         self._draw_court(ax, color='grey', lw=1, outer_lines=True)
 
-        # 2) Define the shot zones as polygons or bounding boxes
-        self.zone_polygons = {
-            'MID_L': np.array([[-250, 140], [-80, 140], [-80, 47.5], [-250, 47.5]]),
-            'MID_LC': np.array([[-80, 140], [-40, 140], [-40, 47.5], [-80, 47.5]]),
-            'MID_C': np.array([[-40, 140], [40, 140], [40, 47.5], [-40, 47.5]]),
-            'MID_RC': np.array([[40, 140], [80, 140], [80, 47.5], [40, 47.5]]),
-            'MID_R': np.array([[80, 140], [250, 140], [250, 47.5], [80, 47.5]]),
-            'THREE_L': np.array([[-250, 422.5], [-220, 422.5], [-220, 140], [-250, 140]]),
-            'THREE_LC': np.array([[-220, 422.5], [-80, 422.5], [-80, 140], [-220, 140]]),
-            'THREE_C': np.array([[-80, 422.5], [80, 422.5], [80, 140], [-80, 140]]),
-            'THREE_RC': np.array([[80, 422.5], [220, 422.5], [220, 140], [80, 140]]),
-            'THREE_R': np.array([[220, 422.5], [250, 422.5], [250, 140], [220, 140]]),
-            'REST_AREA': np.array([[-80, 47.5], [80, 47.5], [80, -47.5], [-80, -47.5]]),
-            'PAINT_L': np.array([[-80, 47.5], [-60, 47.5], [-60, -47.5], [-80, -47.5]]),
-            'PAINT_C': np.array([[-60, 47.5], [60, 47.5], [60, -47.5], [-60, -47.5]]),
-            'PAINT_R': np.array([[60, 47.5], [80, 47.5], [80, -47.5], [60, -47.5]])
-        }
-
         for zone_name, verts in self.zone_polygons.items():
             pct = self.stats.at[zone_name, 'pct']
             poly = plt.Polygon(verts, facecolor=plt.cm.get_cmap(cmap)(pct), alpha=alpha)
@@ -115,3 +80,5 @@ class Heatmap:
         ax.set_aspect('equal')
         ax.axis('off')
         return ax
+    
+    

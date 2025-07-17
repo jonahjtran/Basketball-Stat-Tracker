@@ -4,25 +4,23 @@ from datetime import datetime
 from enum import Enum, auto
 from analytics import calculate_fg_percentage
 
-class Action(Enum):
-    MADE_TWO = auto()
-    MADE_THREE = auto()
-    MISSED_SHOT = auto()
-    OFFENSIVE_REBOUND = auto()
-    DEFENSIVE_REBOUND = auto()
-    STEAL = auto()
-    ASSIST = auto()
-    BLOCK = auto()
-    TURNOVER = auto()
 
+class ShotZone(Enum):
+    MID_L = auto()
+    MID_LC = auto()
+    MID_C = auto()
+    MID_RC = auto()
+    MID_R = auto()
+    THREE_L = auto()
+    THREE_LC = auto()
+    THREE_C = auto()
+    THREE_RC = auto()
+    THREE_R = auto()
+    REST_AREA = auto()
+    PAINT_L = auto()
+    PAINT_C = auto()
+    PAINT_R = auto()
 
-class Event():
-    def __init__(self, player_id, game_id, action, x_coord, y_coord):
-        self.player_id = player_id
-        self.game_id = game_id
-        self.action = action
-        self.x_coord = x_coord
-        self.y_coord = y_coord
 
 class Game():
     def __init__(self):
@@ -35,6 +33,12 @@ class Game():
         self.block = 0
         self.turnover = 0
         self.df_events = pd.DataFrame(columns=['player_id', 'game_id', 'action', 'x_coord', 'y_coord'])
+        self.df_zone_stats =  pd.DataFrame(
+            0,
+            index=list(ShotZone),
+            columns=['attempts', 'makes', 'pct'],
+            dtype=float
+        )
 
     def add_event(self, event):
         if event.action == Action.MADE_TWO:
