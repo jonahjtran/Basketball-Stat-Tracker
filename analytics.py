@@ -1,6 +1,5 @@
 import numpy as np
 import math
-#from game import ShotZone
 
 
 # parameters: average (float), attempts (int), make (boolean)
