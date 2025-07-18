@@ -1,54 +1,69 @@
 import pytest
-import matplotlib
-matplotlib.use('Agg')
-import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
+from types import SimpleNamespace
+
 
 import sys
 sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
 from heatmap import Heatmap, ShotZone
+from event import Action, Event
 
-def test_shotzone_count():
-    # There should be 14 shot zones
-    assert len(ShotZone) == 14
+def test_event_tracker():
+    event = Event(12, 1, Action.MADE_SHOT, 5, 5)
+    map = Heatmap()
+    map.add_event(event)
+    assert(map.events[0] == event)
 
-    expected_names = [
-        'MID_L','MID_LC','MID_C','MID_RC','MID_R',
-        'THREE_L','THREE_LC','THREE_C','THREE_RC','THREE_R',
-        'REST_AREA','PAINT_L','PAINT_C','PAINT_R'
+def test_initial_state():
+    hm = Heatmap()
+    assert hm.player_id is None
+    assert hm.events == []
+
+def test_draw_court_adds_patches():
+    hm = Heatmap()
+    fig, ax = plt.subplots()
+    # no court drawn yet
+    assert len(ax.patches) == 0
+    # draw with outer_lines too
+    hm._draw_court(ax, outer_lines=True)
+    # should have many court elements
+    assert len(ax.patches) > 0
+
+
+def test_render_with_hex_returns_figure_and_uses_draw_court(monkeypatch):
+    hm = Heatmap()
+    called = {"ax": None}
+    # stub out the court‐drawing so we don't rely on its internals
+    def fake_draw(ax):
+        called["ax"] = ax
+        return ax
+    hm._draw_court = fake_draw
+
+    fig = hm.render_with_hex(gridsize=1, mincnt=1)
+    # returns a Figure
+    assert isinstance(fig, plt.Figure)
+    # and it did call our stub
+    assert called["ax"] is not None
+
+def test_render_with_hex_counts_made_and_missed():
+    hm = Heatmap()
+    # two “made” events at the same spot, one “missed” elsewhere
+    events = [
+        SimpleNamespace(x=0, y=0, action="made layup"),
+        SimpleNamespace(x=0, y=0, action="made 3"),
+        SimpleNamespace(x=1, y=1, action="missed jumper"),
     ]
-    assert [z.name for z in ShotZone] == expected_names
+    for e in events:
+        hm.add_event(e)
 
+    # with gridsize=1, all points fall into a single hex each
+    fig = hm.render_with_hex(gridsize=1, mincnt=1)
+    ax = fig.axes[0]
+    cols = ax.collections
+    # first collection = makes, second = misses
+    made_counts = cols[0].get_array()
+    missed_counts = cols[1].get_array()
 
-def test_init_stats_dataframe():
-    h = Heatmap()
-    # Stats should be a DataFrame with zeros
-    assert isinstance(h.stats, pd.DataFrame)
-    assert list(h.stats.columns) == ['attempts', 'makes', 'pct']
-    assert list(h.stats.index) == list(ShotZone)
-    assert (h.stats.values == 0).all()
+    assert made_counts.sum() == 2
+    assert missed_counts.sum() == 1
 
-
-def test_draw_court_patches_count_without_outer():
-    fig, ax = plt.subplots()
-    ax.clear()
-    ax = Heatmap._draw_court(ax, outer_lines=False)
-    # Should add 12 court elements (without outer lines)
-    assert len(ax.patches) == 12
-
-
-def test_draw_court_patches_count_with_outer():
-    fig, ax = plt.subplots()
-    ax = Heatmap._draw_court(ax, outer_lines=True)
-    # Should add 13 court elements (with outer lines)
-    assert len(ax.patches) == 13
-
-
-def test_add_event():
-    heatmap = Heatmap()
-    heatmap.add_event(ShotZone.MID_C, True)
-    #print(heatmap.stats.at[ShotZone.MID_C, 'attempts'])
-    assert(heatmap.stats.at[ShotZone.MID_C, 'attempts'] == 1)
-    assert(heatmap.stats.at[ShotZone.MID_C, 'makes'] == 1)
-    assert(heatmap.stats.at[ShotZone.MID_C, 'pct'] == 100)

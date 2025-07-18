@@ -9,18 +9,10 @@ from event import Event
 
 class Heatmap:
     def __init__(self):
-        # 1) stats table
         self.player_id = None
-        self.stats = pd.DataFrame(
-            0,
-            index=list(ShotZone),
-            columns=['attempts', 'makes', 'pct'],
-            dtype=float
-        )
         self.events = []
 
-    # parameters: event
-    # adds events to self.stats
+    # adds events to events record
     def add_event(self, event):
         self.events.append(event)
 
