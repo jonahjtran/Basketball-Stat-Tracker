@@ -14,7 +14,7 @@ def calculate_fg_percentage(average, attempts, made_shot):
 
 # parameters: x_coord and y_coord of shot
 # returns ShotZone of shot
-def define_shot_zone(self):
+def define_shot_zone(event):
     from game import ShotZone
 
     REST_RADIUS        =   40     # 4 ft
@@ -24,27 +24,27 @@ def define_shot_zone(self):
     THREE_POINT_RADIUS =  237.5   # 23.75 ft
     THREE_CORNER_X     =  220     # corner 3 x
     THREE_CORNER_Y     =  140     # corner 3 y
-    r = math.hypot(self.x_coord, self.y_coord)
+    r = math.hypot(event.x_coord, event.y_coord)
 
     # 1) restricted area
     if r <= REST_RADIUS:
         return ShotZone.REST_AREA
 
     # 2) paint box
-    if self.y_coord <= PAINT_Y_MAX and abs(self.x_coord) <= PAINT_X_OUTER:
-        if abs(self.x_coord) <= PAINT_X_INNER:
+    if event.y_coord <= PAINT_Y_MAX and abs(event.x_coord) <= PAINT_X_OUTER:
+        if abs(event.x_coord) <= PAINT_X_INNER:
             return ShotZone.PAINT_C
-        return ShotZone.PAINT_L if self.x_coord < 0 else ShotZone.PAINT_R
+        return ShotZone.PAINT_L if event.x_coord < 0 else ShotZone.PAINT_R
 
     # 3) mid-range vs 3-pointer
     is_two = r <= THREE_POINT_RADIUS
 
     # 4) corner threes are a special case of 3-pt
-    if not is_two and abs(self.x_coord) >= THREE_CORNER_X and self.y_coord <= THREE_CORNER_Y:
-        return ShotZone.THREE_L if self.x_coord < 0 else ShotZone.THREE_R
+    if not is_two and abs(event.x_coord) >= THREE_CORNER_X and event.y_coord <= THREE_CORNER_Y:
+        return ShotZone.THREE_L if event.x_coord < 0 else ShotZone.THREE_R
 
     # 5) bucket into L, LC, C, RC, R by angle from y-axis
-    θ = math.degrees(math.atan2(self.x_coord, self.y_coord))
+    θ = math.degrees(math.atan2(event.x_coord, event.y_coord))
     if θ < -30:
         side = "L"
     elif θ < -10:
