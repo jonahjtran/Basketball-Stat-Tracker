@@ -4,6 +4,7 @@ from supabase import create_client, Client
 from event import Event, Action
 from game import ShotZone
 from analytics import define_shot_zone, calculate_fg_percentage
+from heatmap import Heatmap
 
 
 load_dotenv()
@@ -79,23 +80,25 @@ def increment(event):
         except Exception as e:
             print(f"row doesn't exist or trouble connecting to database: {e}")
 
+
 def process_game(events):
-    player_ids = []                                 # list of player_ids where row in player_game already created
+    player_ids = {}                                # list of player_ids where row in player_game already created
     for event in events:
+
         if event.player_id in player_ids:           # already player_game for specific player already created
-            player_ids.append(event.player_id)      # add data from event
+            increment(event)
+            if event.action == Action.MADE_SHOT or event.action == Action.MISSED_SHOT:  # check if event was a shot
+                player_ids[event.player_id].append(event)                               # add event to corresponding player key
+            
+        # else:   # handle player_game not created yet
+        #     player_ids[event.player_id] = []    # add player_id to dictionary
+        #     create_row = supabase.from_("player_game").insert({"player_id": event.player_id})   # add blank row to supabase
+        #     increment(event)    # update stat in supabase
+        #     if event.action == Action.MADE_SHOT or event.action == Action.MISSED_SHOT:
+        #          player_ids[event.player_id].append(event)
 
-        else:
-            try:
-                resp = (
-                    supabase
-                    .from_("player_games")
-                    .select("player_id", count="exact")
-                    .eq("player_id", event.player_id)
-                    .limit(1)
-                    .execute()
-                )
-            except Exception as e:
-                print(f"error with supabase:{e}")
+    for key, value in player_ids:
+        heatmap = Heatmap(key, value)
+        image = heatmap.save_as_image()
+        supabase.from_("player_game").update({"heatmap": image}).eq("player_id", key).execute()
 
-            if resp.data:

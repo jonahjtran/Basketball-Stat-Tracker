@@ -9,9 +9,9 @@ from game import ShotZone
 from event import Event
 
 class Heatmap:
-    def __init__(self):
-        self.player_id = None
-        self.events = []
+    def __init__(self, player_id = None, events = []):
+        self.player_id = player_id
+        self.events = events
 
     # adds events to events record
     def add_event(self, event):
@@ -133,8 +133,8 @@ class Heatmap:
         plt.tight_layout()
         return fig
     
-    def save_as_image(heatmap, fmt: str = "png", dpi: int = 300, gridsize: int = 30, mincnt: int = 1) -> bytes:
-        fig = heatmap.render_with_hex(gridsize=gridsize, mincnt=mincnt)
+    def save_as_image(self, fmt: str = "png", dpi: int = 300, gridsize: int = 30, mincnt: int = 1) -> bytes:
+        fig = self.render_with_hex(gridsize=gridsize, mincnt=mincnt)
 
         buf = io.BytesIO()
         fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight")
