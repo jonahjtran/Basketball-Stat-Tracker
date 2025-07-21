@@ -25,8 +25,9 @@ class ShotZone(Enum):
 
 # holds game stats for specific player during specific game
 class Game():
-    def __init__(self):
-        self.player_id = None
+    def __init__(self, player_id, game_id):
+        self.player_id = player_id
+        game_id = game_id
         self.shot_att = 0
         self.shot_avr = None
         self.points = 0
@@ -35,25 +36,34 @@ class Game():
         self.steal = 0
         self.block = 0
         self.turnover = 0
-        self.df_events = pd.DataFrame(columns=['player_id', 'game_id', 'action', 'x_coord', 'y_coord'])
+        self.events = []
         self.df_zone_stats =  pd.DataFrame(
             0,
             index=list(ShotZone),
-            columns=['attempts', 'makes', 'pct'],
+            columns=['attempts', 'makes'],
             dtype=float
         )
 
     def add_event(self, event):
-        if event.action == Action.MADE_TWO:
-            calculate_fg_percentage(self.shot_avr, self.shot_att, True)
+        self.events.append(event)
+        three_zones = [ShotZone.THREE_C, ShotZone.THREE_L, ShotZone.THREE_LC, ShotZone.THREE_R, ShotZone.THREE_RC]
+
+        if event.action == Action.MADE_SHOT:
+            zone = define_shot_zone(event)      # organize shot into shotzone
             self.shot_att += 1
-            self.points += 2
-        elif event.action == Action.MADE_THREE:
-            calculate_fg_percentage(self.shot_avr, self.shot_att, True)
-            self.shot_att += 1
-            self.points += 3
+
+            if zone in three_zones:             # check if player made a 3
+                points += 3
+            else:
+                points += 2
+
+            self.df_zone_stats.loc[self.df_zone_stats["index"] == zone, "attempts"] += 1        # update attempts in shotzone
+            self.df_zone_stats.loc[self.df_zone_stats["index"] == zone, "makes"] += 1           # update makes in shotzone
+
         elif event.action == Action.MISSED_SHOT:
-            calculate_fg_percentage(self.shot_avr, self.shot_att, False)
+            zone = define_shot_zone(event)
+            self.df_zone_stats.loc[self.df_zone_stats["index"] == zone, "attempts"] += 1        # update attempts in shotzone
+
         elif event.action == Action.OFFENSIVE_REBOUND:
             self.off_reb += 1
         elif event.action == Action.DEFENSIVE_REBOUND:
