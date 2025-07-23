@@ -6,7 +6,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 import io
 
 from game import ShotZone
-from event import Event
+from event import Event, Action
 
 class Heatmap:
     def __init__(self, player_id = None, events = []):
@@ -102,10 +102,10 @@ class Heatmap:
         ax.invert_yaxis()
 
         # 2. Filter out only the shot events and split makes vs. misses
-        xs_made   = [e.x for e in self.events if e.action.startswith("made")]
-        ys_made   = [e.y for e in self.events if e.action.startswith("made")]
-        xs_missed = [e.x for e in self.events if e.action.startswith("missed")]
-        ys_missed = [e.y for e in self.events if e.action.startswith("missed")]
+        xs_made   = [e.x_coord for e in self.events if e.action == Action.MADE_SHOT]
+        ys_made   = [e.y_coord for e in self.events if e.action == Action.MADE_SHOT]
+        xs_missed = [e.x_coord for e in self.events if e.action == Action.MISSED_SHOT]
+        ys_missed = [e.y_coord for e in self.events if e.action == Action.MISSED_SHOT]
 
         # 3. Grab the exact court extents so your hexbins line up perfectly
        

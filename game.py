@@ -27,14 +27,15 @@ class ShotZone(Enum):
 class Game():
     def __init__(self, player_id, game_id):
         self.player_id = player_id
-        game_id = game_id
+        self.game_id = game_id
         self.shot_att = 0
-        self.shot_avr = None
+        self.shot_makes = 0
         self.points = 0
         self.off_reb = 0
         self.def_reb = 0
         self.steal = 0
         self.block = 0
+        self.assist = 0
         self.turnover = 0
         self.events = []
         self.df_zone_stats =  pd.DataFrame(
@@ -51,6 +52,7 @@ class Game():
         if event.action == Action.MADE_SHOT:
             zone = define_shot_zone(event)      # organize shot into shotzone
             self.shot_att += 1
+            self.shot_makes += 1
 
             if zone in three_zones:             # check if player made a 3
                 points += 3
