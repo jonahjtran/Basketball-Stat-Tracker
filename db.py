@@ -236,10 +236,11 @@ def process_season(game: Game):
         supabase.table("game")
         .select("season_id")
         .eq("game_id", game.game_id)
+        .eq("player_id", game.player_id)
         .execute()
     )
 
-    # number of games played in season
+    # number of games played in season (includes the game being processed now)
     num_games = (
         supabase.table("game")
         .select("*", count="exact")
@@ -249,5 +250,19 @@ def process_season(game: Game):
 
     # update block average
     block_avr = (
-        supabase.table("players")
+        supabase.table("player_season")
+        .select("block")
+        .eq("player_id", game.player_id)
     )
+    old_blocks = (num_games - 1) * block_avr
+    new_blocks = float((old_blocks + game.block)/num_games)
+
+    update_blocks = (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "block" : new_blocks})
+    )
+
+    # update assist
+    
+
+
