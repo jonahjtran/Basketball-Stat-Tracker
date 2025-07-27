@@ -263,6 +263,75 @@ def process_season(game: Game):
     )
 
     # update assist
-    
+    assist_avr = (
+        supabase.table("player_season")
+        .select("assist")
+        .eq("player_id", game.player_id)
+    )
+    old_assist = (num_games - 1) * assist_avr
+    new_assist = float((old_assist+ game.assist)/num_games)
+
+    update_assist= (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "assist" : new_assist})
+    )
+
+    # update steal
+    steal_avr = (
+        supabase.table("player_season")
+        .select("steal")
+        .eq("player_id", game.player_id)
+    )
+    old_steal = (num_games - 1) * steal_avr
+    new_steal = float((old_steal + game.steal)/num_games)
+
+    update_steal = (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "steal" : new_steal})
+    )
+
+    # update turnover
+    turnover_avr = (
+        supabase.table("player_season")
+        .select("turnover")
+        .eq("player_id", game.player_id)
+    )
+    old_turnover = (num_games - 1) * turnover_avr
+    new_turnover = float((old_turnover + game.turnover)/num_games)
+
+    update_turnover = (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "turnover" : new_turnover})
+    )
+
+    # update offensive rebound
+    off_reb_avr = (
+        supabase.table("player_season")
+        .select("offensive_rebound")
+        .eq("player_id", game.player_id)
+    )
+    old_off_reb= (num_games - 1) * off_reb_avr
+    new_off_reb = float((old_off_reb + game.off_reb)/num_games)
+
+    update_off_reb = (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "offensive_rebound" : new_off_reb})
+    )
+
+    # update defensive rebound
+    def_reb_avr = (
+        supabase.table("player_season")
+        .select("defensive_rebound")
+        .eq("player_id", game.player_id)
+    )
+    old_off_reb= (num_games - 1) * off_reb_avr
+    new_off_reb = float((old_off_reb + game.off_reb)/num_games)
+
+    update_off_reb = (
+        supabase.table("player_season")
+        .upsert({"player_id": game.player_id, "offensive_rebound" : new_off_reb})
+    )
+
+
 
 
