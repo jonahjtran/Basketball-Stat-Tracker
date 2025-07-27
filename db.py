@@ -229,3 +229,25 @@ def process_game(events, game_id):
 
         # update statistics
         increment(value)
+
+def process_season(game: Game):
+    # get season game is part of
+    season_id = (
+        supabase.table("game")
+        .select("season_id")
+        .eq("game_id", game.game_id)
+        .execute()
+    )
+
+    # number of games played in season
+    num_games = (
+        supabase.table("game")
+        .select("*", count="exact")
+        .eq("season_id", season_id.data[0]["season_id"])
+        .execute()
+    ).count
+
+    # update block average
+    block_avr = (
+        supabase.table("players")
+    )
