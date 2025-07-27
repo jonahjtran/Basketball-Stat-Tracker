@@ -7,21 +7,7 @@
 # from event import Action
 
 
-# class ShotZone(Enum):
-#     MID_L = auto()
-#     MID_LC = auto()
-#     MID_C = auto()
-#     MID_RC = auto()
-#     MID_R = auto()
-#     THREE_L = auto()
-#     THREE_LC = auto()
-#     THREE_C = auto()
-#     THREE_RC = auto()
-#     THREE_R = auto()
-#     REST_AREA = auto()
-#     PAINT_L = auto()
-#     PAINT_C = auto()
-#     PAINT_R = auto()
+
 
 # # holds game stats for specific player during specific game
 # class Game():
