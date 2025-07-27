@@ -15,7 +15,7 @@ def calculate_fg_percentage(average, attempts, made_shot):
 # parameters: x_coord and y_coord of shot
 # returns ShotZone of shot
 def define_shot_zone(event):
-    from game import ShotZone
+    from stats_tracker.games.game import ShotZone
 
     REST_RADIUS        =   40     # 4 ft
     PAINT_X_OUTER      =   80     # 16 ft box half-width
