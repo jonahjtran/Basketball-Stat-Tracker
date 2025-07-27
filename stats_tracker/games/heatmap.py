@@ -133,14 +133,9 @@ class Heatmap:
         plt.tight_layout()
         return fig
     
-    def save_as_image(self, fmt: str = "png", dpi: int = 300, gridsize: int = 30, mincnt: int = 1) -> bytes:
-        fig = self.render_with_hex(gridsize=gridsize, mincnt=mincnt)
-
+    def save_as_image(self, **kwargs):
+        fig = self.render_with_hex(**kwargs)
         buf = io.BytesIO()
-        fig.savefig(buf, format=fmt, dpi=dpi, bbox_inches="tight")
-        plt.close(fig)          # avoid memory leak / GUI backend pop-ups
+        fig.savefig(buf, format='png')
         buf.seek(0)
-
-        # 3. Return raw bytes
-        return buf.getvalue()
-
+        return buf
