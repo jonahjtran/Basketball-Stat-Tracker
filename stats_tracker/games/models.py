@@ -33,6 +33,8 @@ class PlayerSeason(models.Model):
 
     heatmap_url = models.URLField(blank=True, null=True)
 
+    games_played = models.IntegerField(default=0)
+
     point = models.FloatField(default=0.0)           
     assist = models.FloatField(default=0.0)                
     steal = models.FloatField(default=0.0)                

@@ -125,7 +125,27 @@ def process_season(player_id, season_id):
         season_id=season_id,
         defaults={
             **averages,
+            "games_played" : totals["games_played"] or 0,
             "shot_zone_stats": combined_shot_zones,
             "heatmap_url": heatmap_url,
         },
     )
+
+def process_player(player_id):
+    player_seasons = PlayerSeason.objects.filter(player_id=player_id)
+
+    totals = {
+        "points" : 0,
+        "assists" : 0, 
+        "steals" : 0,
+        "blocks" : 0,
+        "turnovers" : 0, 
+        "off_rebs" : 0,
+        "def_rebs" : 0,
+        "games_played" : 0
+    }
+
+    combined_shot_zones = {}
+
+    for ps in player_seasons:
+        totals["points"] += ps.ppg * ps.games_played
