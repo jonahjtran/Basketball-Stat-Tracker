@@ -114,13 +114,17 @@ def process_season(player_id, season_id):
         "turnover_per_game": (totals["turnovers"] or 0) / gp,
     }
 
+    events = list(Event.objects.filter(player_id=player_id, game_id__season_id=season_id))
+    heatmap = Heatmap(player_id, events)
+    image = heatmap.save_as_image()
+    heatmap_url = upload_heatmap_to_supabase(season_id, player_id, image)
+
     PlayerSeason.objects.update_or_create(
         player_id=player_id,
         season_id=season_id,
         defaults={
             **averages,
             "shot_zone_stats": combined_shot_zones,
+            "heatmap_url": heatmap_url,
         },
     )
-
-        
