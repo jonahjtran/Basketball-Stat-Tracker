@@ -18,6 +18,7 @@ class PlayerCareer(models.Model):
     off_reb = models.FloatField(default=0.0)
     def_reb = models.FloatField(default=0.0)
     turnover = models.FloatField(default=0.0)
+    games_played = models.IntegerField(default=0)
 
     shot_zone_stats = models.JSONField(default=dict)
 

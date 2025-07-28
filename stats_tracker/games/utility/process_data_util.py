@@ -2,7 +2,7 @@ from django.db import transaction
 from django.db.models import Sum, Count
 
 from collections import defaultdict
-from stats_tracker.games.models import PlayerSeason, PlayerGame, Event, ShotZone, Game
+from stats_tracker.games.models import PlayerSeason, PlayerGame, Event, ShotZone, Game, Player, PlayerCareer
 from stats_tracker.games.heatmap import Heatmap
 from .supabase_utility import upload_heatmap_to_supabase
 
@@ -103,17 +103,17 @@ def process_season(player_id, season_id):
         attempts = zone_stats["attempts"]
         zone_stats["fg_pct"] = zone_stats["makes"] / attempts if attempts > 0 else 0.0
 
-    # stat averages
-    gp = totals["games_played"] or 1
-    averages = {
-        "ppg" : (totals["points"] or 0) / gp,
-        "apg" : (totals["assists"] or 0) / gp,
-        "spg" : (totals["steals"] or 0) / gp,
-        "bpg" : (totals["blocks"] or 0) / gp,
-        "off_reb_per_game" : (totals["off_rebs"] or 0) / gp,
-        "def_reb_per_game" : (totals["def_rebs"] or 0) / gp,
-        "turnover_per_game": (totals["turnovers"] or 0) / gp,
-    }
+    # # stat averages
+    # gp = totals["games_played"] or 1
+    # averages = {
+    #     "ppg" : (totals["points"] or 0) / gp,
+    #     "apg" : (totals["assists"] or 0) / gp,
+    #     "spg" : (totals["steals"] or 0) / gp,
+    #     "bpg" : (totals["blocks"] or 0) / gp,
+    #     "off_reb_per_game" : (totals["off_rebs"] or 0) / gp,
+    #     "def_reb_per_game" : (totals["def_rebs"] or 0) / gp,
+    #     "turnover_per_game": (totals["turnovers"] or 0) / gp,
+    # }
 
     events = list(Event.objects.filter(player_id=player_id, game_id__season_id=season_id))
     heatmap = Heatmap(player_id, events)
@@ -124,7 +124,7 @@ def process_season(player_id, season_id):
         player_id=player_id,
         season_id=season_id,
         defaults={
-            **averages,
+            **totals,
             "games_played" : totals["games_played"] or 0,
             "shot_zone_stats": combined_shot_zones,
             "heatmap_url": heatmap_url,
@@ -135,17 +135,48 @@ def process_player(player_id):
     player_seasons = PlayerSeason.objects.filter(player_id=player_id)
 
     totals = {
-        "points" : 0,
-        "assists" : 0, 
-        "steals" : 0,
-        "blocks" : 0,
-        "turnovers" : 0, 
-        "off_rebs" : 0,
-        "def_rebs" : 0,
+        "point" : 0,
+        "assist" : 0, 
+        "steal" : 0,
+        "block" : 0,
+        "turnover" : 0, 
+        "off_reb" : 0,
+        "def_reb" : 0,
         "games_played" : 0
     }
 
     combined_shot_zones = {}
 
     for ps in player_seasons:
-        totals["points"] += ps.ppg * ps.games_played
+        totals["games_played"] += ps.games_played
+        totals["point"] += ps.point
+        totals["assist"] += ps.assist
+        totals["block"] += ps.block
+        totals["steal"] += ps.steal
+        totals["turnover"] += ps.turnover
+        totals["off_reb"] += ps.off_reb
+        totals["def_reb"] += ps.def_reb
+
+        for zone, zone_stats in ps.shot_zone_stats.items():
+            if zone not in combined_shot_zones:
+                combined_shot_zones[zone] = {"makes": 0, "attempts": 0}
+            combined_shot_zones[zone]["makes"] += zone_stats.get("makes", 0)
+            combined_shot_zones[zone]["attempts"] += zone_stats.get("attempts", 0)
+
+    for zone, zone_stats in combined_shot_zones.items():
+        attempts = zone_stats["attempts"]
+        zone_stats["fg_pct"] = zone_stats["makes"] / attempts if attempts > 0 else 0.0
+
+    events = list(Event.objects.filter(player_id=player_id))
+    player_heatmap = Heatmap(player_id, events)
+    image = player_heatmap.save_as_image()
+    heatmap_url = upload_heatmap_to_supabase("career", player_id, image)
+
+    PlayerCareer.objects.update_or_create(
+        player_id=player_id,
+        defaults= {
+            **totals,
+            "shot_zone_stats" : combined_shot_zones,
+            "heatmap_url" : heatmap_url
+        }
+    )
