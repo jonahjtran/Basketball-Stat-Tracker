@@ -5,7 +5,7 @@ from matplotlib.patches import Circle, Rectangle, Arc, Polygon, Wedge
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 import io
 
-from stats_tracker.games.game import ShotZone
+from shotzone import ShotZone
 from stats_tracker.games.models import Event, Action
 
 class Heatmap:
