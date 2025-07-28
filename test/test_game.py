@@ -4,7 +4,7 @@ import numpy as np
 import sys
 sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
 
-from game import Game, ShotZone
+from stats_tracker.games.game import Game, ShotZone
 from event import Event, Action
 from analytics import define_shot_zone
 

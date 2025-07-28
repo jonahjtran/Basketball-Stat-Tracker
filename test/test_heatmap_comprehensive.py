@@ -6,7 +6,7 @@ import io
 
 import sys
 sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
-from heatmap import Heatmap
+from stats_tracker.games.heatmap import Heatmap
 from event import Action, Event
 
 class TestHeatmapInitialization:

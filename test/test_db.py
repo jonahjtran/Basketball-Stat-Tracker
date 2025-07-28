@@ -8,7 +8,7 @@ import sys
 sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
 from db import process_game, increment
 from event import Event, Action
-from game import Game, ShotZone
+from stats_tracker.games.game import Game, ShotZone
 
 load_dotenv()
 

@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 # make sure your project folder is on the path
 sys.path.insert(0, ".")
 
-from heatmap import Heatmap
+from stats_tracker.games.heatmap import Heatmap
 from event import Event, Action
 
 # A tiny helper so we don't have to import your full Event class

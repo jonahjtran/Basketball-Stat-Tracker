@@ -5,7 +5,7 @@ sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
 
 from analytics import calculate_fg_percentage, define_shot_zone
 from event import Event, Action
-from game import ShotZone
+from stats_tracker.games.game import ShotZone
 
 class TestCalculateFgPercentage:
     def test_first_shot_made(self):

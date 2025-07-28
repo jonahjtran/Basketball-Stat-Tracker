@@ -14,9 +14,9 @@ class TestSuite:
         """Test that all main modules can be imported without errors."""
         try:
             import event
-            import game
-            import analytics
-            import heatmap
+            import stats_tracker.games.game as game
+            import analytics as analytics
+            import stats_tracker.games.heatmap as heatmap
             import db
             import main
             success = True
@@ -29,8 +29,8 @@ class TestSuite:
     def test_all_classes_instantiable(self):
         """Test that all main classes can be instantiated."""
         from event import Event, Action
-        from game import Game, ShotZone
-        from heatmap import Heatmap
+        from stats_tracker.games.game import Game, ShotZone
+        from stats_tracker.games.heatmap import Heatmap
         
         # Test Event instantiation
         event = Event(1001, 2001, Action.MADE_SHOT, 100, 200)
@@ -47,7 +47,7 @@ class TestSuite:
     def test_enum_completeness(self):
         """Test that all enums have expected values."""
         from event import Action
-        from game import ShotZone
+        from stats_tracker.games.game import ShotZone
         
         # Test Action enum
         expected_actions = {

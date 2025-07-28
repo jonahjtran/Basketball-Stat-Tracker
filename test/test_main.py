@@ -67,7 +67,7 @@ class TestMainFunction:
         original_init = None
         captured_heatmap = None
         
-        from heatmap import Heatmap
+        from stats_tracker.games.heatmap import Heatmap
         
         def capture_heatmap_init(self, player_id=None, events=[]):
             nonlocal captured_heatmap
@@ -104,7 +104,7 @@ class TestMainFunction:
         
         captured_heatmap = None
         
-        from heatmap import Heatmap
+        from stats_tracker.games.heatmap import Heatmap
         original_init = Heatmap.__init__
         
         def capture_heatmap_init(self, player_id=None, events=[]):
@@ -134,7 +134,7 @@ class TestMainFunction:
         
         render_called = False
         
-        from heatmap import Heatmap
+        from stats_tracker.games.heatmap import Heatmap
         original_render = Heatmap.render_with_hex
         
         def mock_render(self, gridsize=20, mincnt=1):
@@ -156,7 +156,7 @@ class TestMainFunction:
         
         render_params = {}
         
-        from heatmap import Heatmap
+        from stats_tracker.games.heatmap import Heatmap
         original_render = Heatmap.render_with_hex
         
         def capture_render_params(self, gridsize=20, mincnt=1):

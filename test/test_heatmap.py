@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import sys
 sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker')
-from heatmap import Heatmap, ShotZone
+from stats_tracker.games.heatmap import Heatmap, ShotZone
 from event import Action, Event
 
 def test_event_tracker():
