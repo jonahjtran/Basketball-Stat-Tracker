@@ -7,7 +7,7 @@ class Player(models.Model):
     name = models.CharField(max_length=100)
 
 class PlayerCareer(models.Model):
-    player_id = models.OneToOneField(blank=True, null=True)
+    player_id = models.OneToOneField(Player, on_delete=models.CASCADE)
 
     heatmap_url = models.URLField(blank=True, null=True)
 
@@ -118,4 +118,3 @@ class Event(models.Model):
         else:
             self.shot_zone = None
         super().save(*args, **kwargs)
-
