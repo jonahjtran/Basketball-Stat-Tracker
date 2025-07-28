@@ -12,6 +12,10 @@ class Season(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
+class PlayerSeason(models.Model):
+    player_id = models.ForeignKey(Player, on_delete=models.CASCADE)
+    season_id = models.ForeignKey(Season, on_delete=models.CASCADE)
+
 class Game(models.Model):
     external_id = models.CharField(max_length=50, unique=True)
     opponent = models.CharField(max_length=100)
