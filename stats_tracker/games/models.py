@@ -16,6 +16,20 @@ class PlayerSeason(models.Model):
     player_id = models.ForeignKey(Player, on_delete=models.CASCADE)
     season_id = models.ForeignKey(Season, on_delete=models.CASCADE)
 
+    ppg = models.IntegerField(default=0)                        # points per game
+    apg = models.IntegerField(default=0)                        # assists per game
+    spg = models.IntegerField(default=0)                        # steals per game
+    bpg = models.IntegerField(default=0)                        # blocks per game
+    off_reb_per_game = models.IntegerField(default=0)           # offensive rebounds per game
+    def_reb_per_game = models.IntegerField(default=0)           # defensive rebounds per game
+    turnover_per_game = models.IntegerField(default=0)          # turnovers per game
+
+    shot_zone_stats = models.JSONField(default=dict)
+
+    class Meta:
+        unique_together = ("player_id", "game_id")
+
+
 class Game(models.Model):
     external_id = models.CharField(max_length=50, unique=True)
     opponent = models.CharField(max_length=100)
