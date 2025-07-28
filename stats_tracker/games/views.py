@@ -17,3 +17,5 @@ def player_heatmap(request, game_id, player_id):
     img_bytes = hm.save_as_image()  # modify to return BytesIO
 
     return FileResponse(img_bytes, content_type='image/png')
+
+def process_game(request, )

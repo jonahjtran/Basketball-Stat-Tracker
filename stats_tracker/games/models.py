@@ -3,19 +3,39 @@ from .shotzone import ShotZone, define_shot_zone
 
 # Create your models here.
 class Player(models.Model):
-    supabase_id = models.CharField(unique=True)
+    player_id = models.CharField(unique=True) 
     name = models.CharField(max_length=100)
 
 class Season(models.Model):
-    supabase_id = models.CharField(unique=True)
+    season_id = models.CharField(unique=True)
     name = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
 
 class Game(models.Model):
-    supabase_id = models.CharField(unique=True)
+    game_id = models.CharField(unique=True)
     opponent = models.CharField(max_length=100)
     date = models.DateField()
+
+class PlayerGame(models.Model):
+    player_id = models.ForeignKey(Player, on_delete=models.CASCADE)
+    game_id   = models.ForeignKey(Game, on_delete=models.CASCADE)
+
+    # heatmap
+    heatmap_url = models.URLField(blank=True, null=True)
+
+    # basic stats
+    point = models.IntegerField(default=0)
+    assist = models.IntegerField(default=0)
+    steal = models.IntegerField(default=0)
+    block = models.IntegerField(default=0)
+    off_reb = models.IntegerField(default=0)
+    def_reb = models.IntegerField(default=0)
+    turnover = models.IntegerField(default=0)
+
+    # shotzone averages and attempts
+    shot_zone_stats = models.JSONField(default=dict)
+
 
 class Event(models.Model):
     class Action(models.TextChoices):
