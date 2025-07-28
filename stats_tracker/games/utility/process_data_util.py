@@ -68,6 +68,7 @@ def process_game(events, game_id):
                     "heatmap_url": heatmap_url,
                 },
             )
+        process_season(player_id, Game.objects.get(id=game_id).season_id_id)
 
 def process_season(player_id, season_id):
     # get PlayerGame rows for specific player and season
