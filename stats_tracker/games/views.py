@@ -1,15 +1,9 @@
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
 from .models import PlayerGame, PlayerSeason, Game
-from .serializers import PlayerGameSerializer, PlayerSeasonSerializer
+from .serializers import PlayerGameSerializer, PlayerSeasonSerializer, GameSerializer
 from .utility.process_data_util import process_game
 from rest_framework import serializers
-
-
-class GameSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Game
-        fields = '__all__'
 
 
 # Create your views here.

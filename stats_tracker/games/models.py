@@ -6,6 +6,21 @@ class Player(models.Model):
     external_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
 
+class PlayerCareer(models.Model):
+    player_id = models.OneToOneField(blank=True, null=True)
+
+    heatmap_url = models.URLField(blank=True, null=True)
+
+    point = models.FloatField(default=0.0)
+    assist = models.FloatField(default=0.0)
+    steal = models.FloatField(default=0.0)
+    block = models.FloatField(default=0.0)
+    off_reb = models.FloatField(default=0.0)
+    def_reb = models.FloatField(default=0.0)
+    turnover = models.FloatField(default=0.0)
+
+    shot_zone_stats = models.JSONField(default=dict)
+
 class Season(models.Model):
     external_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
