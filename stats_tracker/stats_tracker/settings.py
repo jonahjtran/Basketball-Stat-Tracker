@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'stats_tracker'
 ]
 
 MIDDLEWARE = [
@@ -81,9 +82,10 @@ DATABASES = {
         "ENGINE": "django.db.backends.postgresql",
         "NAME": "postgres",  # Or your actual DB name
         "USER": "postgres",
-        "PASSWORD": "DATABASE_PWD",
+        "PASSWORD": os.getenv("DATABASE_PWD"),
         "HOST": "db.abcxyz.supabase.co",
         "PORT": "5432",
+        "OPTIONS": {"sslmode": "require"},
     }
 }
 

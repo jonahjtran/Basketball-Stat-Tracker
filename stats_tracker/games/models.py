@@ -3,17 +3,17 @@ from .shotzone import ShotZone, define_shot_zone
 
 # Create your models here.
 class Player(models.Model):
-    player_id = models.CharField(unique=True) 
+    external_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
 
 class Season(models.Model):
-    season_id = models.CharField(unique=True)
+    external_id = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=100)
     start_date = models.DateField()
     end_date = models.DateField()
 
 class Game(models.Model):
-    game_id = models.CharField(unique=True)
+    external_id = models.CharField(max_length=50, unique=True)
     opponent = models.CharField(max_length=100)
     date = models.DateField()
 
@@ -35,6 +35,9 @@ class PlayerGame(models.Model):
 
     # shotzone averages and attempts
     shot_zone_stats = models.JSONField(default=dict)
+
+    class Meta:
+        unique_together = ("player_id", "game_id")
 
 
 class Event(models.Model):
