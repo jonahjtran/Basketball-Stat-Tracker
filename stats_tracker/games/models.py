@@ -16,6 +16,8 @@ class PlayerSeason(models.Model):
     player_id = models.ForeignKey(Player, on_delete=models.CASCADE)
     season_id = models.ForeignKey(Season, on_delete=models.CASCADE)
 
+    heatmap_url = models.URLField(blank=True, null=True)
+
     point = models.FloatField(default=0.0)           
     assist = models.FloatField(default=0.0)                
     steal = models.FloatField(default=0.0)                
