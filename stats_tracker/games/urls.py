@@ -15,9 +15,20 @@ urlpatterns = [
     # POST endpoints
     path('events/<int:game_id>/', views.post_events, name='post_events'),
     path('games/create/', views.create_game, name='create_game'),
+    path('seasons/create/', views.create_season, name='create_season'),
 
     # DELETE endpoints
     path('games/<int:game_id>/delete/', views.delete_game, name='delete_game'),
     path('seasons/<int:season_id>/<int:player_id>/delete/', views.delete_season, name='delete_season'),
     path('players/<int:player_id>/delete/', views.delete_player, name='delete_player'),
+
+    # PATCH/PUT endpoints
+    path('players/<int:player_id>/update/', views.update_player, name='update_player'),
+    path('seasons/<int:season_id>/update/', views.update_season, name='update_season'),
+    path('games/<int:game_id>/update/', views.update_game, name='update_game'),
+
+    # GET single resource endpoints
+    path('games/<int:game_id>/', views.get_game, name='get_game'),
+    path('players/<int:player_id>/', views.get_player, name='get_player'),
+    path('seasons/<int:season_id>/', views.get_season, name='get_season'),
 ]
