@@ -172,3 +172,11 @@ def get_season(request, season_id):
     season = get_object_or_404(Season, id=season_id)
     serializer = SeasonSerializer(season)
     return Response(serializer.data)
+
+@api_view(["GET"])
+def player_heatmap(request, game_id, player_id):
+    try:
+        player_game = PlayerGame.objects.get(game_id=game_id, player_id=player_id)
+        return Response({"heatmap_url": player_game.heatmap_url})
+    except PlayerGame.DoesNotExist:
+        return Response({"error": "Player game not found"}, status=404)

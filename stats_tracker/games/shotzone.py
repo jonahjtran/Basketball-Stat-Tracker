@@ -16,6 +16,10 @@ class ShotZone(Enum):
     PAINT_L = auto()
     PAINT_C = auto()
     PAINT_R = auto()
+    
+    @classmethod
+    def choices(cls):
+        return [(member.name, member.name) for member in cls]
 
     # parameters: x_coord and y_coord of shot
 # returns ShotZone of shot

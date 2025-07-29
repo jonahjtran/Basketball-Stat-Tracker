@@ -5,8 +5,8 @@ from matplotlib.patches import Circle, Rectangle, Arc, Polygon, Wedge
 from matplotlib.colors import LinearSegmentedColormap, Normalize
 import io
 
-from shotzone import ShotZone
-from stats_tracker.games.models import Event, Action
+from .shotzone import ShotZone
+from .models import Event
 
 class Heatmap:
     def __init__(self, player_id = None, events = []):
@@ -102,10 +102,10 @@ class Heatmap:
         ax.invert_yaxis()
 
         # 2. Filter out only the shot events and split makes vs. misses
-        xs_made = [e.x_coord for e in self.events if e.action in [Action.MADE_TWO, Action.MADE_THREE]]
-        ys_made = [e.y_coord for e in self.events if e.action in [Action.MADE_TWO, Action.MADE_THREE]]
-        xs_missed = [e.x_coord for e in self.events if e.action in [Action.MISSED_TWO, Action.MISSED_THREE]]
-        ys_missed = [e.y_coord for e in self.events if e.action in [Action.MISSED_TWO, Action.MISSED_THREE]]
+        xs_made = [e.x for e in self.events if e.action in ["made_two", "made_three"]]
+        ys_made = [e.y for e in self.events if e.action in ["made_two", "made_three"]]
+        xs_missed = [e.x for e in self.events if e.action in ["missed_two", "missed_three"]]
+        ys_missed = [e.y for e in self.events if e.action in ["missed_two", "missed_three"]]
 
         # 3. Grab the exact court extents so your hexbins line up perfectly
        

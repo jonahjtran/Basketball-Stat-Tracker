@@ -41,8 +41,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'stats_tracker'
-    'rest_framework'
+    'stats_tracker',
+    'rest_framework',
+    'games'
 ]
 
 MIDDLEWARE = [
@@ -84,12 +85,11 @@ DATABASES = {
         "NAME": "postgres",  # Or your actual DB name
         "USER": "postgres",
         "PASSWORD": os.getenv("DATABASE_PWD"),
-        "HOST": "db.abcxyz.supabase.co",
+        "HOST": "db.pnqaizbucsdbdpwhifwz.supabase.co",
         "PORT": "5432",
         "OPTIONS": {"sslmode": "require"},
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

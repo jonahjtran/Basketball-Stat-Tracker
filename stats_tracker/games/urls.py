@@ -16,6 +16,7 @@ urlpatterns = [
     path('events/<int:game_id>/', views.post_events, name='post_events'),
     path('games/create/', views.create_game, name='create_game'),
     path('seasons/create/', views.create_season, name='create_season'),
+    path('players/create/', views.create_player, name='create_player'),
 
     # DELETE endpoints
     path('games/<int:game_id>/delete/', views.delete_game, name='delete_game'),

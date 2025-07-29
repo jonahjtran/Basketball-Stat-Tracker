@@ -106,7 +106,14 @@ class Event(models.Model):
         if self.action in {
             self.Action.MADE_SHOT, self.Action.MISSED_SHOT,
         }:
-            self.shot_zone = define_shot_zone(self.x, self.y).name
+            # Create a simple object with x_coord and y_coord for the define_shot_zone function
+            class EventCoords:
+                def __init__(self, x, y):
+                    self.x_coord = x
+                    self.y_coord = y
+            
+            event_coords = EventCoords(self.x, self.y)
+            self.shot_zone = define_shot_zone(event_coords).name
             if self.action == self.Action.MADE_SHOT and  self.shot_zone in {ShotZone.THREE_C, ShotZone.THREE_L, ShotZone.THREE_LC, ShotZone.THREE_R, ShotZone.THREE_RC}:
                 self.action = self.Action.MADE_THREE
             elif self.action == self.Action.MISSED_SHOT and  self.shot_zone in {ShotZone.THREE_C, ShotZone.THREE_L, ShotZone.THREE_LC, ShotZone.THREE_R, ShotZone.THREE_RC}:
