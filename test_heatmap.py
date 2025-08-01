@@ -6,8 +6,8 @@ import sys
 import os
 import django
 
-# Add the stats_tracker directory to the path
-sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker/stats_tracker')
+# Add the backend/stats_tracker directory to the path
+sys.path.append('/Users/jonahtran/Desktop/Github/Basketball Stat Tracker/backend/stats_tracker')
 
 # Set up Django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'stats_tracker.settings')
