@@ -115,7 +115,7 @@ export const seasonAPI = {
   }),
   
   // Delete a season
-  delete: (id) => fetchAPI(`/seasons/${id}/delete/`, {
+  delete: (id, playerId) => fetchAPI(`/seasons/${id}/${playerId}/delete/`, {
     method: 'DELETE',
   }),
   

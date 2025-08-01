@@ -81,33 +81,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Recent Games Section */}
-      <section className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
-            <h2 className="text-3xl font-bold text-slate-900">Recent Games</h2>
-            <p className="text-slate-600">Latest matchups and performances</p>
-          </div>
-          <Link 
-            href="/games" 
-            className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 bg-white rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-colors duration-200"
-          >
-            <span>View All Games</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.slice(0, 6).map((game, index) => (
-            <div key={game.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
-              <Link href={`/games/${game.id}`}>
-                <GameCard game={game} />
-              </Link>
-            </div>
-          ))}
-        </div>
-      </section>
-
       {/* Top Players Section */}
       <section className="space-y-6">
         <div className="flex items-center justify-between">
@@ -116,10 +89,10 @@ export default function HomePage() {
             <p className="text-slate-600">Leading performers this season</p>
           </div>
           <Link 
-            href="/players" 
+            href="/analytics" 
             className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 bg-white rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-colors duration-200"
           >
-            <span>View All Players</span>
+            <span>View Analytics</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
@@ -127,8 +100,35 @@ export default function HomePage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {players.slice(0, 8).map((player, index) => (
             <div key={player.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
-              <Link href={`/players/${player.id}`}>
+              <Link href={`/analytics?view=players&player=${player.id}`}>
                 <PlayerCard player={player} stats={player.stats} />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Recent Games Section */}
+      <section className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div className="space-y-1">
+            <h2 className="text-3xl font-bold text-slate-900">Recent Games</h2>
+            <p className="text-slate-600">Latest matchups and performances</p>
+          </div>
+          <Link 
+            href="/analytics?view=games" 
+            className="inline-flex items-center space-x-2 px-4 py-2 border border-slate-300 bg-white rounded-lg text-sm font-medium text-slate-700 hover:bg-orange-50 hover:border-orange-300 hover:text-orange-700 transition-colors duration-200"
+          >
+            <span>View Analytics</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {games.slice(0, 6).map((game, index) => (
+            <div key={game.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
+              <Link href={`/analytics?view=games&game=${game.id}`}>
+                <GameCard game={game} />
               </Link>
             </div>
           ))}

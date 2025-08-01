@@ -1,6 +1,6 @@
 import './globals.css'
 import Link from 'next/link'
-import { Circle, Home, Users, Calendar, Menu, X } from 'lucide-react'
+import { Circle, Home, Users, Calendar, Menu, X, BarChart3, Plus } from 'lucide-react'
 
 export const metadata = {
   title: 'Basketball Stat Tracker',
@@ -40,18 +40,18 @@ export default function RootLayout({ children }) {
                   <span>Dashboard</span>
                 </Link>
                 <Link 
-                  href="/players" 
+                  href="/analytics" 
                   className="flex items-center space-x-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors duration-200"
                 >
-                  <Users className="w-4 h-4" />
-                  <span>Players</span>
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Analytics</span>
                 </Link>
                 <Link 
-                  href="/games" 
+                  href="/new-game" 
                   className="flex items-center space-x-2 text-sm font-medium text-slate-500 hover:text-slate-900 transition-colors duration-200"
                 >
-                  <Calendar className="w-4 h-4" />
-                  <span>Games</span>
+                  <Plus className="w-4 h-4" />
+                  <span>New Game</span>
                 </Link>
               </div>
 

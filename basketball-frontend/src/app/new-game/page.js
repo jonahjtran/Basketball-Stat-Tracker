@@ -1,0 +1,446 @@
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Plus, Users, Clock, Target, X, CheckCircle, AlertCircle } from 'lucide-react';
+
+export default function NewGamePage() {
+  const [gameState, setGameState] = useState('setup'); // setup, active, ended
+  const [gameData, setGameData] = useState({
+    opponent: '',
+    date: new Date().toISOString().split('T')[0],
+    homeTeam: '',
+    awayTeam: '',
+  });
+  const [currentPlayer, setCurrentPlayer] = useState('');
+  const [events, setEvents] = useState([]);
+  const [showPlayerInput, setShowPlayerInput] = useState(false);
+  const [lastClickPosition, setLastClickPosition] = useState(null);
+  const courtRef = useRef(null);
+
+  const mockPlayers = [
+    "LeBron James", "Stephen Curry", "Kevin Durant", "Giannis Antetokounmpo",
+    "Luka Doncic", "Joel Embiid", "Nikola Jokic", "Damian Lillard"
+  ];
+
+  const actionTypes = {
+    'left': { name: 'Made Shot', points: 2, color: 'green' },
+    'right': { name: 'Missed Shot', points: 0, color: 'red' },
+    'b': { name: 'Block', points: 0, color: 'blue' },
+    'of': { name: 'Offensive Rebound', points: 0, color: 'orange' },
+    'df': { name: 'Defensive Rebound', points: 0, color: 'purple' },
+    't': { name: 'Turnover', points: 0, color: 'red' },
+    'a': { name: 'Assist', points: 0, color: 'green' },
+    's': { name: 'Steal', points: 0, color: 'yellow' },
+  };
+
+  const handleCourtClick = (e) => {
+    if (gameState !== 'active') return;
+    
+    const rect = courtRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    setLastClickPosition({ x, y });
+    setShowPlayerInput(true);
+  };
+
+  const handleAction = (actionType) => {
+    if (!currentPlayer.trim()) return;
+    
+    const action = actionTypes[actionType];
+    const newEvent = {
+      id: Date.now(),
+      player: currentPlayer,
+      action: action.name,
+      points: action.points,
+      color: action.color,
+      position: lastClickPosition,
+      timestamp: new Date().toISOString(),
+    };
+    
+    setEvents([...events, newEvent]);
+    setCurrentPlayer('');
+    setShowPlayerInput(false);
+    setLastClickPosition(null);
+  };
+
+  const handleKeyPress = (e) => {
+    if (!showPlayerInput) return;
+    
+    const actionType = e.key.toLowerCase();
+    if (actionTypes[actionType]) {
+      e.preventDefault();
+      handleAction(actionType);
+    }
+  };
+
+  const startGame = () => {
+    if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
+      alert('Please fill in all game details');
+      return;
+    }
+    setGameState('active');
+  };
+
+  const endGame = () => {
+    setGameState('ended');
+  };
+
+  const getGameStats = () => {
+    const stats = {};
+    events.forEach(event => {
+      if (!stats[event.player]) {
+        stats[event.player] = { points: 0, assists: 0, rebounds: 0, steals: 0, blocks: 0, turnovers: 0 };
+      }
+      
+      stats[event.player].points += event.points;
+      if (event.action === 'Assist') stats[event.player].assists++;
+      if (event.action.includes('Rebound')) stats[event.player].rebounds++;
+      if (event.action === 'Steal') stats[event.player].steals++;
+      if (event.action === 'Block') stats[event.player].blocks++;
+      if (event.action === 'Turnover') stats[event.player].turnovers++;
+    });
+    return stats;
+  };
+
+  useEffect(() => {
+    if (showPlayerInput) {
+      document.addEventListener('keydown', handleKeyPress);
+      return () => document.removeEventListener('keydown', handleKeyPress);
+    }
+  }, [showPlayerInput, currentPlayer]);
+
+  const renderSetup = () => (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Game Setup</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Opponent</label>
+            <input
+              type="text"
+              value={gameData.opponent}
+              onChange={(e) => setGameData({...gameData, opponent: e.target.value})}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              placeholder="Enter opponent team name"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Date</label>
+            <input
+              type="date"
+              value={gameData.date}
+              onChange={(e) => setGameData({...gameData, date: e.target.value})}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+            />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Home Team</label>
+              <input
+                type="text"
+                value={gameData.homeTeam}
+                onChange={(e) => setGameData({...gameData, homeTeam: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Your team"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Away Team</label>
+              <input
+                type="text"
+                value={gameData.awayTeam}
+                onChange={(e) => setGameData({...gameData, awayTeam: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="Opponent team"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={startGame}
+          className="w-full mt-6 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200"
+        >
+          Start Game
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderCourt = () => (
+    <div className="space-y-6">
+      {/* Game Info */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Users className="w-4 h-4 text-slate-500" />
+              <span className="text-sm font-medium text-slate-700">{gameData.homeTeam} vs {gameData.awayTeam}</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Clock className="w-4 h-4 text-slate-500" />
+              <span className="text-sm text-slate-500">{new Date().toLocaleTimeString()}</span>
+            </div>
+          </div>
+          <button
+            onClick={endGame}
+            className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors duration-200"
+          >
+            End Game
+          </button>
+        </div>
+      </div>
+
+      {/* Basketball Court */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-slate-900">Basketball Court</h3>
+          <div className="text-sm text-slate-500">
+            Left click: Made shot | Right click: Missed shot | Type action: b(lock), of(fensive rebound), etc.
+          </div>
+        </div>
+        
+        <div className="relative">
+          <div
+            ref={courtRef}
+            onClick={handleCourtClick}
+            className="w-full h-96 bg-gradient-to-b from-orange-100 to-orange-200 rounded-lg border-2 border-orange-300 cursor-crosshair relative overflow-hidden"
+            style={{
+              backgroundImage: `
+                radial-gradient(circle at 20% 50%, #f97316 0%, #ea580c 100%),
+                radial-gradient(circle at 80% 50%, #f97316 0%, #ea580c 100%),
+                linear-gradient(to bottom, #fed7aa 0%, #fdba74 100%)
+              `,
+              backgroundSize: '60px 60px, 60px 60px, 100% 100%',
+              backgroundPosition: '10% 50%, 90% 50%, 0 0'
+            }}
+          >
+            {/* Court markings */}
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Center circle */}
+              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full"></div>
+              
+              {/* Three-point lines */}
+              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
+              
+              {/* Free throw lines */}
+              <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white"></div>
+              <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white"></div>
+            </div>
+
+            {/* Event markers */}
+            {events.map((event) => (
+              <div
+                key={event.id}
+                className={`absolute w-3 h-3 rounded-full border-2 border-white transform -translate-x-1/2 -translate-y-1/2 ${
+                  event.color === 'green' ? 'bg-green-500' :
+                  event.color === 'red' ? 'bg-red-500' :
+                  event.color === 'blue' ? 'bg-blue-500' :
+                  event.color === 'orange' ? 'bg-orange-500' :
+                  event.color === 'purple' ? 'bg-purple-500' :
+                  event.color === 'yellow' ? 'bg-yellow-500' : 'bg-gray-500'
+                }`}
+                style={{
+                  left: `${event.position.x}px`,
+                  top: `${event.position.y}px`
+                }}
+                title={`${event.player}: ${event.action}`}
+              />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Player Input Modal */}
+      {showPlayerInput && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-slate-900 mb-4">Record Event</h3>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Player</label>
+                <input
+                  type="text"
+                  value={currentPlayer}
+                  onChange={(e) => setCurrentPlayer(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  placeholder="Enter player name"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">Action</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => handleAction('left')}
+                    className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200"
+                  >
+                    Made Shot (Left)
+                  </button>
+                  <button
+                    onClick={() => handleAction('right')}
+                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200"
+                  >
+                    Missed Shot (Right)
+                  </button>
+                  <button
+                    onClick={() => handleAction('b')}
+                    className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200"
+                  >
+                    Block (B)
+                  </button>
+                  <button
+                    onClick={() => handleAction('a')}
+                    className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200"
+                  >
+                    Assist (A)
+                  </button>
+                  <button
+                    onClick={() => handleAction('of')}
+                    className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors duration-200"
+                  >
+                    Off. Rebound (OF)
+                  </button>
+                  <button
+                    onClick={() => handleAction('df')}
+                    className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors duration-200"
+                  >
+                    Def. Rebound (DF)
+                  </button>
+                  <button
+                    onClick={() => handleAction('s')}
+                    className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors duration-200"
+                  >
+                    Steal (S)
+                  </button>
+                  <button
+                    onClick={() => handleAction('t')}
+                    className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200"
+                  >
+                    Turnover (T)
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setShowPlayerInput(false)}
+                  className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition-colors duration-200"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Events Log */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-slate-900 mb-4">Game Events</h3>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {events.map((event) => (
+            <div key={event.id} className="flex items-center space-x-3 p-2 rounded-lg bg-slate-50">
+              <div className={`w-3 h-3 rounded-full ${
+                event.color === 'green' ? 'bg-green-500' :
+                event.color === 'red' ? 'bg-red-500' :
+                event.color === 'blue' ? 'bg-blue-500' :
+                event.color === 'orange' ? 'bg-orange-500' :
+                event.color === 'purple' ? 'bg-purple-500' :
+                event.color === 'yellow' ? 'bg-yellow-500' : 'bg-gray-500'
+              }`} />
+              <span className="font-medium text-slate-900">{event.player}</span>
+              <span className="text-slate-600">{event.action}</span>
+              {event.points > 0 && (
+                <span className="text-green-600 font-medium">+{event.points} pts</span>
+              )}
+              <span className="text-xs text-slate-400 ml-auto">
+                {new Date(event.timestamp).toLocaleTimeString()}
+              </span>
+            </div>
+          ))}
+          {events.length === 0 && (
+            <p className="text-slate-500 text-center py-4">No events recorded yet. Click on the court to add events.</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderGameSummary = () => {
+    const stats = getGameStats();
+    const totalPoints = Object.values(stats).reduce((sum, player) => sum + player.points, 0);
+    
+    return (
+      <div className="space-y-6">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Game Summary</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Game Details</h3>
+              <div className="space-y-2">
+                <p><span className="font-medium">Teams:</span> {gameData.homeTeam} vs {gameData.awayTeam}</p>
+                <p><span className="font-medium">Date:</span> {gameData.date}</p>
+                <p><span className="font-medium">Total Events:</span> {events.length}</p>
+                <p><span className="font-medium">Total Points:</span> {totalPoints}</p>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 mb-4">Player Statistics</h3>
+              <div className="space-y-2">
+                {Object.entries(stats).map(([player, playerStats]) => (
+                  <div key={player} className="flex justify-between items-center p-2 bg-slate-50 rounded">
+                    <span className="font-medium">{player}</span>
+                    <div className="flex space-x-4 text-sm">
+                      <span className="text-orange-600">{playerStats.points} pts</span>
+                      <span className="text-blue-600">{playerStats.assists} ast</span>
+                      <span className="text-green-600">{playerStats.rebounds} reb</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          
+          <button
+            onClick={() => setGameState('setup')}
+            className="w-full px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200"
+          >
+            Start New Game
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-8">
+      {/* Header */}
+      <div className="space-y-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-green-600 rounded-xl flex items-center justify-center">
+            <Plus className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">New Game</h1>
+            <p className="text-slate-600">Track live basketball statistics with court interaction</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Content */}
+      {gameState === 'setup' && renderSetup()}
+      {gameState === 'active' && renderCourt()}
+      {gameState === 'ended' && renderGameSummary()}
+    </div>
+  );
+} 
