@@ -32,7 +32,28 @@ export default function AnalyticsPage() {
       // Fetch players
       const playersResponse = await fetch('http://localhost:8000/games/players/');
       const playersData = await playersResponse.json();
-      setPlayers(playersData);
+      
+      // Fetch career stats for each player
+      const playersWithStats = await Promise.all(
+        playersData.map(async (player) => {
+          try {
+            const statsResponse = await fetch(`http://localhost:8000/games/player-stats/${player.id}/`);
+            const statsData = await statsResponse.json();
+            return {
+              ...player,
+              stats: statsData
+            };
+          } catch (error) {
+            console.error(`Error fetching stats for player ${player.id}:`, error);
+            return {
+              ...player,
+              stats: null
+            };
+          }
+        })
+      );
+      
+      setPlayers(playersWithStats);
 
       // Fetch games
       const gamesResponse = await fetch('http://localhost:8000/games/games/');
@@ -130,19 +151,33 @@ export default function AnalyticsPage() {
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">--</p>
+                    <p className="text-2xl font-bold text-orange-600">
+                      {player.stats?.averages?.ppg || player.stats?.points ? 
+                        (player.stats.averages?.ppg || Math.round(player.stats.points / (player.stats.games_played || 1))) : 
+                        '--'}
+                    </p>
                     <p className="text-xs text-slate-500">PPG</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-blue-600">--</p>
+                    <p className="text-2xl font-bold text-blue-600">
+                      {player.stats?.averages?.apg || player.stats?.assists ? 
+                        (player.stats.averages?.apg || Math.round(player.stats.assists / (player.stats.games_played || 1))) : 
+                        '--'}
+                    </p>
                     <p className="text-xs text-slate-500">APG</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">--</p>
+                    <p className="text-2xl font-bold text-green-600">
+                      {player.stats?.averages?.off_reb_per_game || player.stats?.offensive_rebounds ? 
+                        (player.stats.averages?.off_reb_per_game || Math.round((player.stats.offensive_rebounds + player.stats.defensive_rebounds) / (player.stats.games_played || 1))) : 
+                        '--'}
+                    </p>
                     <p className="text-xs text-slate-500">RPG</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-purple-600">--</p>
+                    <p className="text-2xl font-bold text-purple-600">
+                      {player.stats?.games_played || '--'}
+                    </p>
                     <p className="text-xs text-slate-500">Games</p>
                   </div>
                 </div>
@@ -296,7 +331,7 @@ export default function AnalyticsPage() {
           </button>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-2 text-black">
           <select
             value={selectedFilter}
             onChange={(e) => setSelectedFilter(e.target.value)}

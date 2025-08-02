@@ -379,6 +379,7 @@ export default function NewGamePage() {
               <input
                 type="date"
                 value={seasonData.start_date}
+                style={{ color: 'black' }}
                 onChange={(e) => setSeasonData({...seasonData, start_date: e.target.value})}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
@@ -388,6 +389,7 @@ export default function NewGamePage() {
               <input
                 type="date"
                 value={seasonData.end_date}
+                style={{ color: 'black' }}
                 onChange={(e) => setSeasonData({...seasonData, end_date: e.target.value})}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
               />

@@ -45,15 +45,55 @@ export default function PlayerAnalyticsPage() {
       const careerData = await careerResponse.json();
       setCareerStats(careerData);
 
-      // Fetch player's seasons
+      // Fetch player's seasons with stats
       const seasonsResponse = await fetch(`http://localhost:8000/games/seasons/`);
       const seasonsData = await seasonsResponse.json();
-      setSeasons(seasonsData);
+      
+      // Fetch season stats for each season
+      const seasonsWithStats = await Promise.all(
+        seasonsData.map(async (season) => {
+          try {
+            const seasonStatsResponse = await fetch(`http://localhost:8000/games/player-season/${season.id}/${playerId}/`);
+            const seasonStatsData = await seasonStatsResponse.json();
+            return {
+              ...season,
+              stats: seasonStatsData
+            };
+          } catch (error) {
+            console.error(`Error fetching season stats for season ${season.id}:`, error);
+            return {
+              ...season,
+              stats: null
+            };
+          }
+        })
+      );
+      setSeasons(seasonsWithStats);
 
-      // Fetch player's games
+      // Fetch player's games with stats
       const gamesResponse = await fetch(`http://localhost:8000/games/games/`);
       const gamesData = await gamesResponse.json();
-      setGames(gamesData);
+      
+      // Fetch game stats for each game
+      const gamesWithStats = await Promise.all(
+        gamesData.map(async (game) => {
+          try {
+            const gameStatsResponse = await fetch(`http://localhost:8000/games/player-game/${game.id}/${playerId}/`);
+            const gameStatsData = await gameStatsResponse.json();
+            return {
+              ...game,
+              stats: gameStatsData
+            };
+          } catch (error) {
+            console.error(`Error fetching game stats for game ${game.id}:`, error);
+            return {
+              ...game,
+              stats: null
+            };
+          }
+        })
+      );
+      setGames(gamesWithStats);
 
     } catch (error) {
       console.error('Error fetching player data:', error);
@@ -261,11 +301,15 @@ export default function PlayerAnalyticsPage() {
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-orange-600">--</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {season.stats?.games_played || '--'}
+                    </p>
                     <p className="text-xs text-slate-500">Games</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-blue-600">--</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {season.stats?.point ? Math.round(season.stats.point / (season.stats.games_played || 1)) : '--'}
+                    </p>
                     <p className="text-xs text-slate-500">Avg PPG</p>
                   </div>
                 </div>
@@ -322,11 +366,15 @@ export default function PlayerAnalyticsPage() {
 
                 <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200">
                   <div className="text-center">
-                    <p className="text-lg font-bold text-orange-600">--</p>
+                    <p className="text-lg font-bold text-orange-600">
+                      {game.stats?.point || '--'}
+                    </p>
                     <p className="text-xs text-slate-500">Points</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-lg font-bold text-blue-600">--</p>
+                    <p className="text-lg font-bold text-blue-600">
+                      {game.stats?.assist || '--'}
+                    </p>
                     <p className="text-xs text-slate-500">Assists</p>
                   </div>
                 </div>
