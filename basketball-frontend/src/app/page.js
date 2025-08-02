@@ -1,32 +1,48 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { playerAPI, gameAPI } from '@/lib/api';
 import PlayerCard from '@/components/PlayerCard';
 import GameCard from '@/components/GameCard';
 import { Users, Calendar, TrendingUp, ArrowRight, Star, Trophy, Target } from 'lucide-react';
 
-// Mock data for development - replace with actual API calls
-const mockPlayers = [
-  { id: 1, name: "LeBron James", external_id: "lebron_james", stats: { points: 28.5, assists: 8.7, games_played: 45 } },
-  { id: 2, name: "Stephen Curry", external_id: "stephen_curry", stats: { points: 29.8, assists: 6.3, games_played: 42 } },
-  { id: 3, name: "Kevin Durant", external_id: "kevin_durant", stats: { points: 27.1, assists: 5.2, games_played: 38 } },
-  { id: 4, name: "Giannis Antetokounmpo", external_id: "giannis_antetokounmpo", stats: { points: 31.2, assists: 5.8, games_played: 47 } },
-];
-
-const mockGames = [
-  { id: 1, opponent: "Lakers", date: "2025-01-15", external_id: "game_001", score: "112-108" },
-  { id: 2, opponent: "Warriors", date: "2025-01-12", external_id: "game_002", score: "98-105" },
-  { id: 3, opponent: "Celtics", date: "2025-01-10", external_id: "game_003", score: "120-115" },
-];
-
 export default function HomePage() {
-  // In production, uncomment these lines and remove mock data
-  // const players = await playerAPI.getAll();
-  // const games = await gameAPI.getAll();
-  
-  const players = mockPlayers;
-  const games = mockGames;
+  const [players, setPlayers] = useState([]);
+  const [games, setGames] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching data from backend...');
+      
+      // Fetch players
+      console.log('Fetching players...');
+      const playersResponse = await fetch('http://localhost:8000/games/players/');
+      console.log('Players response status:', playersResponse.status);
+      const playersData = await playersResponse.json();
+      console.log('Players data:', playersData);
+      setPlayers(playersData);
+
+      // Fetch games
+      console.log('Fetching games...');
+      const gamesResponse = await fetch('http://localhost:8000/games/games/');
+      console.log('Games response status:', gamesResponse.status);
+      const gamesData = await gamesResponse.json();
+      console.log('Games data:', gamesData);
+      setGames(gamesData);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="space-y-12">
@@ -97,15 +113,29 @@ export default function HomePage() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {players.slice(0, 8).map((player, index) => (
-            <div key={player.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
-              <Link href={`/analytics?view=players&player=${player.id}`}>
-                <PlayerCard player={player} stats={player.stats} />
-              </Link>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading players...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {players.length > 0 ? (
+              players.slice(0, 8).map((player, index) => (
+                <div key={player.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
+                  <Link href={`/analytics/player/${player.id}`}>
+                    <PlayerCard player={player} stats={player.stats} />
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-slate-600">No players found. Players count: {players.length}</p>
+                <p className="text-sm text-slate-500 mt-2">Check browser console for debugging info.</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Recent Games Section */}
@@ -124,15 +154,29 @@ export default function HomePage() {
           </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {games.slice(0, 6).map((game, index) => (
-            <div key={game.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
-              <Link href={`/analytics?view=games&game=${game.id}`}>
-                <GameCard game={game} />
-              </Link>
-            </div>
-          ))}
-        </div>
+        {loading ? (
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+            <p className="mt-4 text-slate-600">Loading games...</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {games.length > 0 ? (
+              games.slice(0, 6).map((game, index) => (
+                <div key={game.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
+                  <Link href={`/analytics?view=games&game=${game.id}`}>
+                    <GameCard game={game} />
+                  </Link>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <p className="text-slate-600">No games found. Games count: {games.length}</p>
+                <p className="text-sm text-slate-500 mt-2">Check browser console for debugging info.</p>
+              </div>
+            )}
+          </div>
+        )}
       </section>
 
       {/* Features Section */}

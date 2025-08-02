@@ -1,0 +1,26 @@
+{
+  "name": "basketball-stat-tracker",
+  "version": "1.0.0",
+  "description": "Basketball Stat Tracker - Full Stack Application",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "cd backend/stats_tracker && python manage.py runserver",
+    "dev:frontend": "cd basketball-frontend && npm run dev",
+    "build": "cd basketball-frontend && npm run build",
+    "install:all": "npm install && cd basketball-frontend && npm install && npm run install:backend",
+    "install:backend": "cd backend && pip install -r requirements.txt",
+    "test": "cd backend && python -m pytest",
+    "test:heatmap": "python test_heatmap.py",
+    "migrate": "cd backend/stats_tracker && python manage.py migrate",
+    "makemigrations": "cd backend/stats_tracker && python manage.py makemigrations",
+    "shell": "cd backend/stats_tracker && python manage.py shell",
+    "collectstatic": "cd backend/stats_tracker && python manage.py collectstatic"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "workspaces": [
+    "basketball-frontend"
+  ]
+} 

@@ -1,125 +1,248 @@
 'use client';
 
-import { useState } from 'react';
-import { BarChart3, Filter, Download, TrendingUp, Target, Trophy } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { BarChart3, Filter, Download, TrendingUp, Target, Trophy, Map } from 'lucide-react';
+import Link from 'next/link';
+import HeatmapModal from '@/components/HeatmapModal';
 
 export default function AnalyticsPage() {
   const [selectedView, setSelectedView] = useState('players');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [players, setPlayers] = useState([]);
+  const [games, setGames] = useState([]);
+  const [seasons, setSeasons] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Heatmap state
+  const [heatmapModal, setHeatmapModal] = useState({
+    isOpen: false,
+    data: null,
+    title: '',
+    totalEvents: 0
+  });
 
-  // Mock data - replace with actual API calls
-  const mockPlayers = [
-    { id: 1, name: "LeBron James", points: 28.5, assists: 8.7, rebounds: 7.5, games: 45 },
-    { id: 2, name: "Stephen Curry", points: 29.8, assists: 6.3, rebounds: 4.2, games: 42 },
-    { id: 3, name: "Kevin Durant", points: 27.1, assists: 5.2, rebounds: 6.8, games: 38 },
-    { id: 4, name: "Giannis Antetokounmpo", points: 31.2, assists: 5.8, rebounds: 11.5, games: 47 },
-  ];
+  useEffect(() => {
+    fetchData();
+  }, []);
 
-  const mockGames = [
-    { id: 1, opponent: "Lakers", date: "2025-01-15", score: "112-108", totalPoints: 220 },
-    { id: 2, opponent: "Warriors", date: "2025-01-12", score: "98-105", totalPoints: 203 },
-    { id: 3, opponent: "Celtics", date: "2025-01-10", score: "120-115", totalPoints: 235 },
-  ];
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch players
+      const playersResponse = await fetch('http://localhost:8000/games/players/');
+      const playersData = await playersResponse.json();
+      setPlayers(playersData);
 
-  const mockSeasons = [
-    { id: 1, name: "2024-25 Season", games: 47, avgPoints: 112.5, avgAssists: 24.3 },
-    { id: 2, name: "2023-24 Season", games: 82, avgPoints: 108.2, avgAssists: 22.1 },
-  ];
+      // Fetch games
+      const gamesResponse = await fetch('http://localhost:8000/games/games/');
+      const gamesData = await gamesResponse.json();
+      setGames(gamesData);
+
+      // Fetch seasons
+      const seasonsResponse = await fetch('http://localhost:8000/games/seasons/');
+      const seasonsData = await seasonsResponse.json();
+      setSeasons(seasonsData);
+
+    } catch (error) {
+      console.error('Error fetching data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generateHeatmap = async (endpoint, title) => {
+    try {
+      setHeatmapModal({
+        isOpen: true,
+        data: null,
+        title: 'Generating heatmap...',
+        totalEvents: 0
+      });
+
+      const response = await fetch(`http://localhost:8000/games/${endpoint}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setHeatmapModal({
+          isOpen: true,
+          data: data.heatmap_data,
+          title: data.title || title,
+          totalEvents: data.total_events
+        });
+      } else {
+        setHeatmapModal({
+          isOpen: true,
+          data: null,
+          title: 'Error',
+          totalEvents: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error generating heatmap:', error);
+      setHeatmapModal({
+        isOpen: true,
+        data: null,
+        title: 'Error generating heatmap',
+        totalEvents: 0
+      });
+    }
+  };
+
+  const closeHeatmapModal = () => {
+    setHeatmapModal({
+      isOpen: false,
+      data: null,
+      title: '',
+      totalEvents: 0
+    });
+  };
 
   const renderPlayersView = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {mockPlayers.map((player) => (
-          <div key={player.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">{player.name}</h3>
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
-                  <Target className="w-4 h-4 text-white" />
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading players...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {players.map((player) => (
+            <div key={player.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <Link href={`/analytics/player/${player.id}`} className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 hover:text-orange-600 transition-colors">{player.name}</h3>
+                  </Link>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => generateHeatmap(`heatmap/player/${player.id}/`, `${player.name} Career Heatmap`)}
+                      className="p-2 text-slate-500 hover:text-orange-600 hover:bg-orange-50 rounded-lg transition-colors"
+                      title="Generate Heatmap"
+                    >
+                      <Map className="w-4 h-4" />
+                    </button>
+                    <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
+                      <Target className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">{player.points}</p>
-                  <p className="text-xs text-slate-500">PPG</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{player.assists}</p>
-                  <p className="text-xs text-slate-500">APG</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{player.rebounds}</p>
-                  <p className="text-xs text-slate-500">RPG</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-purple-600">{player.games}</p>
-                  <p className="text-xs text-slate-500">Games</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">--</p>
+                    <p className="text-xs text-slate-500">PPG</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-blue-600">--</p>
+                    <p className="text-xs text-slate-500">APG</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">--</p>
+                    <p className="text-xs text-slate-500">RPG</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-purple-600">--</p>
+                    <p className="text-xs text-slate-500">Games</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
   const renderGamesView = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {mockGames.map((game) => (
-          <div key={game.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">vs {game.opponent}</h3>
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                  <Trophy className="w-4 h-4 text-white" />
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading games...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {games.map((game) => (
+            <div key={game.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">vs {game.opponent}</h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => generateHeatmap(`heatmap/game/${game.id}/`, `All Players vs ${game.opponent}`)}
+                      className="p-2 text-slate-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Generate Game Heatmap"
+                    >
+                      <Map className="w-4 h-4" />
+                    </button>
+                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
+                      <Trophy className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-500">{new Date(game.date).toLocaleDateString()}</p>
+                  <p className="text-xs text-slate-400">Game ID: {game.external_id}</p>
                 </div>
               </div>
-              
-              <div className="space-y-2">
-                <p className="text-sm text-slate-500">{game.date}</p>
-                <p className="text-2xl font-bold text-slate-900">{game.score}</p>
-                <p className="text-sm text-slate-600">Total Points: {game.totalPoints}</p>
-              </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
   const renderSeasonsView = () => (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {mockSeasons.map((season) => (
-          <div key={season.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
-            <div className="p-6 space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">{season.name}</h3>
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-4 h-4 text-white" />
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-slate-600">Loading seasons...</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {seasons.map((season) => (
+            <div key={season.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
+              <div className="p-6 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-slate-900">{season.name}</h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => generateHeatmap(`heatmap/season/${season.id}/`, `All Players - ${season.name}`)}
+                      className="p-2 text-slate-500 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                      title="Generate Season Heatmap"
+                    >
+                      <Map className="w-4 h-4" />
+                    </button>
+                    <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-3 gap-4">
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">{season.games}</p>
-                  <p className="text-xs text-slate-500">Games</p>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-500">
+                    {new Date(season.start_date).getFullYear()} - {new Date(season.end_date).getFullYear()}
+                  </p>
                 </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">{season.avgPoints}</p>
-                  <p className="text-xs text-slate-500">Avg PPG</p>
-                </div>
-                <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{season.avgAssists}</p>
-                  <p className="text-xs text-slate-500">Avg APG</p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-green-600">--</p>
+                    <p className="text-xs text-slate-500">Games</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-2xl font-bold text-orange-600">--</p>
+                    <p className="text-xs text-slate-500">Avg PPG</p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 
@@ -198,6 +321,15 @@ export default function AnalyticsPage() {
           {selectedView === 'seasons' && renderSeasonsView()}
         </div>
       </div>
+
+      {/* Heatmap Modal */}
+      <HeatmapModal
+        isOpen={heatmapModal.isOpen}
+        onClose={closeHeatmapModal}
+        heatmapData={heatmapModal.data}
+        title={heatmapModal.title}
+        totalEvents={heatmapModal.totalEvents}
+      />
     </div>
   );
 } 
