@@ -89,13 +89,7 @@ export default function NewGamePage() {
     }
   };
 
-  const startGame = () => {
-    if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
-      setMessage({ type: 'error', text: 'Please fill in all game details' });
-      return;
-    }
-    setGameState('active');
-  };
+
 
   const endGame = () => {
     setGameState('ended');
@@ -228,14 +222,9 @@ export default function NewGamePage() {
 
       if (response.ok) {
         const newGame = await response.json();
-        setMessage({ type: 'success', text: `Game created successfully! ID: ${newGame.id}` });
-        setGameData({
-          opponent: '',
-          date: new Date().toISOString().split('T')[0],
-          homeTeam: '',
-          awayTeam: '',
-          season_id: '',
-        });
+        setMessage({ type: 'success', text: `Game created successfully! Starting live tracking...` });
+        // Automatically start live game tracking
+        setGameState('active');
       } else {
         const error = await response.json();
         setMessage({ type: 'error', text: `Failed to create game: ${JSON.stringify(error)}` });
@@ -324,7 +313,8 @@ export default function NewGamePage() {
                 type="text"
                 value={playerData.name}
                 onChange={(e) => setPlayerData({...playerData, name: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="Enter player name"
               />
           </div>
@@ -335,7 +325,8 @@ export default function NewGamePage() {
                 type="text"
                 value={playerData.external_id}
                 onChange={(e) => setPlayerData({...playerData, external_id: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="Enter external ID or leave blank for auto-generation"
               />
           </div>
@@ -364,7 +355,8 @@ export default function NewGamePage() {
                 type="text"
                 value={seasonData.name}
                 onChange={(e) => setSeasonData({...seasonData, name: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="e.g., 2023-24 Season"
               />
           </div>
@@ -375,7 +367,8 @@ export default function NewGamePage() {
                 type="text"
                 value={seasonData.external_id}
                 onChange={(e) => setSeasonData({...seasonData, external_id: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="Enter external ID or leave blank for auto-generation"
               />
           </div>
@@ -425,7 +418,8 @@ export default function NewGamePage() {
               type="text"
               value={gameData.opponent}
               onChange={(e) => setGameData({...gameData, opponent: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+              style={{ color: 'black' }}
               placeholder="Enter opponent team name"
             />
           </div>
@@ -465,7 +459,8 @@ export default function NewGamePage() {
                 type="text"
                 value={gameData.homeTeam}
                 onChange={(e) => setGameData({...gameData, homeTeam: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="Your team"
               />
             </div>
@@ -475,29 +470,21 @@ export default function NewGamePage() {
                 type="text"
                 value={gameData.awayTeam}
                 onChange={(e) => setGameData({...gameData, awayTeam: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                style={{ color: 'black' }}
                 placeholder="Opponent team"
               />
             </div>
           </div>
         </div>
         
-        <div className="flex space-x-4 mt-6">
-          <button
-            onClick={createGame}
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Creating Game...' : 'Create Game'}
-          </button>
-          <button
-            onClick={startGame}
-            disabled={loading}
-            className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Start Live Game
-          </button>
-        </div>
+        <button
+          onClick={createGame}
+          disabled={loading}
+          className="w-full mt-6 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Creating Game...' : 'Create & Start Game'}
+        </button>
       </div>
     </div>
   );
@@ -600,7 +587,8 @@ export default function NewGamePage() {
                   type="text"
                   value={currentPlayer}
                   onChange={(e) => setCurrentPlayer(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+                  style={{ color: 'black' }}
                   placeholder="Enter player name"
                   autoFocus
                 />
