@@ -85,7 +85,7 @@ export default function PlayerAnalyticsPage() {
         setHeatmapModal({
           isOpen: true,
           data: null,
-          title: 'Error',
+          title: data.error || 'Error generating heatmap',
           totalEvents: 0
         });
       }
@@ -94,7 +94,7 @@ export default function PlayerAnalyticsPage() {
       setHeatmapModal({
         isOpen: true,
         data: null,
-        title: 'Error generating heatmap',
+        title: `Error: ${error.message}`,
         totalEvents: 0
       });
     }

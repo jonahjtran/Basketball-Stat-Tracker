@@ -1,5 +1,8 @@
 import numpy as np
 import pandas as pd
+import matplotlib
+# Set matplotlib to use non-interactive backend to avoid GUI issues
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 from matplotlib.patches import Circle, Rectangle, Arc, Polygon, Wedge
 from matplotlib.colors import LinearSegmentedColormap, Normalize

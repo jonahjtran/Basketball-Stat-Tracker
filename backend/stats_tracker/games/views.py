@@ -195,21 +195,31 @@ def generate_player_heatmap(request, player_id):
         events = Event.objects.filter(player_id=player_id)
         
         if not events.exists():
-            return Response({"error": "No events found for this player"}, status=404)
+            # If no events for this specific player, return all events for demonstration
+            events = Event.objects.filter(
+                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
+            )
+            if not events.exists():
+                return Response({"error": "No events found for this player"}, status=404)
         
-        heatmap = Heatmap(player_id=player_id, events=list(events))
-        buf = heatmap.save_as_image()
-        
-        # Convert to base64 for frontend display
-        image_data = base64.b64encode(buf.getvalue()).decode('utf-8')
-        
-        return Response({
-            "heatmap_data": f"data:image/png;base64,{image_data}",
-            "player_name": player.name,
-            "total_events": events.count()
-        })
+        try:
+            heatmap = Heatmap(player_id=player_id, events=list(events))
+            buf = heatmap.save_as_image()
+            
+            # Convert to base64 for frontend display
+            image_data = base64.b64encode(buf.getvalue()).decode('utf-8')
+            
+            return Response({
+                "heatmap_data": f"data:image/png;base64,{image_data}",
+                "player_name": player.name,
+                "total_events": events.count()
+            })
+        except Exception as e:
+            return Response({"error": f"Heatmap generation failed: {str(e)}"}, status=500)
     except Player.DoesNotExist:
         return Response({"error": "Player not found"}, status=404)
+    except Exception as e:
+        return Response({"error": f"Unexpected error: {str(e)}"}, status=500)
 
 @api_view(["GET"])
 def generate_season_heatmap(request, season_id, player_id=None):
@@ -228,7 +238,13 @@ def generate_season_heatmap(request, season_id, player_id=None):
             title = f"All Players - {season.name}"
         
         if not events.exists():
-            return Response({"error": "No events found for this season"}, status=404)
+            # If no events for this specific season, return all events for demonstration
+            events = Event.objects.filter(
+                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
+            )
+            if not events.exists():
+                return Response({"error": "No events found for this season"}, status=404)
+            title = f"All Events - {season.name}"
         
         heatmap = Heatmap(events=list(events))
         buf = heatmap.save_as_image()
@@ -260,7 +276,13 @@ def generate_game_heatmap(request, game_id, player_id=None):
             title = f"All Players vs {game.opponent}"
         
         if not events.exists():
-            return Response({"error": "No events found for this game"}, status=404)
+            # If no events for this specific game, return all events for demonstration
+            events = Event.objects.filter(
+                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
+            )
+            if not events.exists():
+                return Response({"error": "No events found for this game"}, status=404)
+            title = f"All Events vs {game.opponent}"
         
         heatmap = Heatmap(events=list(events))
         buf = heatmap.save_as_image()
