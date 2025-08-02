@@ -1,20 +1,35 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Plus, Users, Clock, Target, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Plus, Users, Clock, Target, X, CheckCircle, AlertCircle, UserPlus, Calendar, Trophy } from 'lucide-react';
 
 export default function NewGamePage() {
+  const [activeTab, setActiveTab] = useState('game'); // game, player, season
   const [gameState, setGameState] = useState('setup'); // setup, active, ended
   const [gameData, setGameData] = useState({
     opponent: '',
     date: new Date().toISOString().split('T')[0],
     homeTeam: '',
     awayTeam: '',
+    season_id: '',
+  });
+  const [seasons, setSeasons] = useState([]);
+  const [playerData, setPlayerData] = useState({
+    name: '',
+    external_id: '',
+  });
+  const [seasonData, setSeasonData] = useState({
+    name: '',
+    external_id: '',
+    start_date: new Date().toISOString().split('T')[0],
+    end_date: new Date().toISOString().split('T')[0],
   });
   const [currentPlayer, setCurrentPlayer] = useState('');
   const [events, setEvents] = useState([]);
   const [showPlayerInput, setShowPlayerInput] = useState(false);
   const [lastClickPosition, setLastClickPosition] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState({ type: '', text: '' });
   const courtRef = useRef(null);
 
   const mockPlayers = [
@@ -76,7 +91,7 @@ export default function NewGamePage() {
 
   const startGame = () => {
     if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
-      alert('Please fill in all game details');
+      setMessage({ type: 'error', text: 'Please fill in all game details' });
       return;
     }
     setGameState('active');
@@ -103,6 +118,135 @@ export default function NewGamePage() {
     return stats;
   };
 
+  // API Functions
+  const createPlayer = async () => {
+    if (!playerData.name.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a player name' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/players/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: playerData.name,
+          external_id: playerData.external_id || playerData.name.toLowerCase().replace(/\s+/g, '_'),
+        }),
+      });
+
+      if (response.ok) {
+        const newPlayer = await response.json();
+        setMessage({ type: 'success', text: `Player "${newPlayer.name}" created successfully!` });
+        setPlayerData({ name: '', external_id: '' });
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: `Failed to create player: ${JSON.stringify(error)}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Error creating player: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createSeason = async () => {
+    if (!seasonData.name.trim()) {
+      setMessage({ type: 'error', text: 'Please enter a season name' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/seasons/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: seasonData.name,
+          external_id: seasonData.external_id || seasonData.name.toLowerCase().replace(/\s+/g, '_'),
+          start_date: seasonData.start_date,
+          end_date: seasonData.end_date,
+        }),
+      });
+
+      if (response.ok) {
+        const newSeason = await response.json();
+        setMessage({ type: 'success', text: `Season "${newSeason.name}" created successfully!` });
+        setSeasonData({
+          name: '',
+          external_id: '',
+          start_date: new Date().toISOString().split('T')[0],
+          end_date: new Date().toISOString().split('T')[0],
+        });
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: `Failed to create season: ${JSON.stringify(error)}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Error creating season: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchSeasons = async () => {
+    try {
+      const response = await fetch('/api/seasons/');
+      if (response.ok) {
+        const data = await response.json();
+        setSeasons(data);
+      }
+    } catch (error) {
+      console.error('Error fetching seasons:', error);
+    }
+  };
+
+  const createGame = async () => {
+    if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
+      setMessage({ type: 'error', text: 'Please fill in all game details' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch('/api/games/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          opponent: gameData.opponent,
+          date: gameData.date,
+          external_id: `${gameData.homeTeam}_vs_${gameData.awayTeam}_${gameData.date}`,
+        }),
+      });
+
+      if (response.ok) {
+        const newGame = await response.json();
+        setMessage({ type: 'success', text: `Game created successfully! ID: ${newGame.id}` });
+        setGameData({
+          opponent: '',
+          date: new Date().toISOString().split('T')[0],
+          homeTeam: '',
+          awayTeam: '',
+          season_id: '',
+        });
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: `Failed to create game: ${JSON.stringify(error)}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Error creating game: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (showPlayerInput) {
       document.addEventListener('keydown', handleKeyPress);
@@ -110,19 +254,178 @@ export default function NewGamePage() {
     }
   }, [showPlayerInput, currentPlayer]);
 
-  const renderSetup = () => (
+  useEffect(() => {
+    fetchSeasons();
+  }, []);
+
+  // Clear message after 5 seconds
+  useEffect(() => {
+    if (message.text) {
+      const timer = setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [message]);
+
+  const renderTabs = () => (
+    <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+      <div className="flex space-x-1 mb-6">
+        <button
+          onClick={() => setActiveTab('game')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+            activeTab === 'game'
+              ? 'bg-orange-500 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-center space-x-2">
+            <Trophy className="w-4 h-4" />
+            <span>New Game</span>
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('player')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+            activeTab === 'player'
+              ? 'bg-orange-500 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-center space-x-2">
+            <UserPlus className="w-4 h-4" />
+            <span>New Player</span>
+          </div>
+        </button>
+        <button
+          onClick={() => setActiveTab('season')}
+          className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 ${
+            activeTab === 'season'
+              ? 'bg-orange-500 text-white'
+              : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+          }`}
+        >
+          <div className="flex items-center justify-center space-x-2">
+            <Calendar className="w-4 h-4" />
+            <span>New Season</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderPlayerForm = () => (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Add New Player</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Player Name</label>
+                          <input
+                type="text"
+                value={playerData.name}
+                onChange={(e) => setPlayerData({...playerData, name: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                placeholder="Enter player name"
+              />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">External ID (Optional)</label>
+                          <input
+                type="text"
+                value={playerData.external_id}
+                onChange={(e) => setPlayerData({...playerData, external_id: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                placeholder="Enter external ID or leave blank for auto-generation"
+              />
+          </div>
+        </div>
+        
+        <button
+          onClick={createPlayer}
+          disabled={loading}
+          className="w-full mt-6 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Creating Player...' : 'Create Player'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderSeasonForm = () => (
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">Add New Season</h2>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Season Name</label>
+                          <input
+                type="text"
+                value={seasonData.name}
+                onChange={(e) => setSeasonData({...seasonData, name: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                placeholder="e.g., 2023-24 Season"
+              />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">External ID (Optional)</label>
+                          <input
+                type="text"
+                value={seasonData.external_id}
+                onChange={(e) => setSeasonData({...seasonData, external_id: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
+                placeholder="Enter external ID or leave blank for auto-generation"
+              />
+          </div>
+          
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">Start Date</label>
+              <input
+                type="date"
+                value={seasonData.start_date}
+                onChange={(e) => setSeasonData({...seasonData, start_date: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">End Date</label>
+              <input
+                type="date"
+                value={seasonData.end_date}
+                onChange={(e) => setSeasonData({...seasonData, end_date: e.target.value})}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+          </div>
+        </div>
+        
+        <button
+          onClick={createSeason}
+          disabled={loading}
+          className="w-full mt-6 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {loading ? 'Creating Season...' : 'Create Season'}
+        </button>
+      </div>
+    </div>
+  );
+
+  const renderGameForm = () => (
     <div className="max-w-2xl mx-auto space-y-6">
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <h2 className="text-2xl font-bold text-slate-900 mb-6">Game Setup</h2>
         
         <div className="space-y-4">
-          <div>
+          <div >
             <label className="block text-sm font-medium text-slate-700 mb-2">Opponent</label>
             <input
               type="text"
               value={gameData.opponent}
               onChange={(e) => setGameData({...gameData, opponent: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
               placeholder="Enter opponent team name"
             />
           </div>
@@ -133,8 +436,26 @@ export default function NewGamePage() {
               type="date"
               value={gameData.date}
               onChange={(e) => setGameData({...gameData, date: e.target.value})}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
+              style={{ color: 'black' }}
             />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Season (Optional)</label>
+            <select
+              value={gameData.season_id}
+              onChange={(e) => setGameData({...gameData, season_id: e.target.value})}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
+              style={{ color: 'black' }}
+            >
+              <option value="">Select a season (optional)</option>
+              {seasons.map((season) => (
+                <option key={season.id} value={season.id} style={{ color: 'black' }}>
+                  {season.name}
+                </option>
+              ))}
+            </select>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
@@ -144,7 +465,7 @@ export default function NewGamePage() {
                 type="text"
                 value={gameData.homeTeam}
                 onChange={(e) => setGameData({...gameData, homeTeam: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
                 placeholder="Your team"
               />
             </div>
@@ -154,19 +475,29 @@ export default function NewGamePage() {
                 type="text"
                 value={gameData.awayTeam}
                 onChange={(e) => setGameData({...gameData, awayTeam: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
                 placeholder="Opponent team"
               />
             </div>
           </div>
         </div>
         
-        <button
-          onClick={startGame}
-          className="w-full mt-6 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200"
-        >
-          Start Game
-        </button>
+        <div className="flex space-x-4 mt-6">
+          <button
+            onClick={createGame}
+            disabled={loading}
+            className="flex-1 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white font-medium rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Creating Game...' : 'Create Game'}
+          </button>
+          <button
+            onClick={startGame}
+            disabled={loading}
+            className="flex-1 px-4 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white font-medium rounded-lg hover:from-orange-600 hover:to-orange-700 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            Start Live Game
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -178,12 +509,12 @@ export default function NewGamePage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Users className="w-4 h-4 text-slate-500" />
+              <Users className="w-4 h-4 text-slate-600" />
               <span className="text-sm font-medium text-slate-700">{gameData.homeTeam} vs {gameData.awayTeam}</span>
             </div>
             <div className="flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-slate-500" />
-              <span className="text-sm text-slate-500">{new Date().toLocaleTimeString()}</span>
+              <Clock className="w-4 h-4 text-slate-600" />
+              <span className="text-sm text-slate-600">{new Date().toLocaleTimeString()}</span>
             </div>
           </div>
           <button
@@ -199,7 +530,7 @@ export default function NewGamePage() {
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Basketball Court</h3>
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-slate-600">
             Left click: Made shot | Right click: Missed shot | Type action: b(lock), of(fensive rebound), etc.
           </div>
         </div>
@@ -269,7 +600,7 @@ export default function NewGamePage() {
                   type="text"
                   value={currentPlayer}
                   onChange={(e) => setCurrentPlayer(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500"
                   placeholder="Enter player name"
                   autoFocus
                 />
@@ -316,7 +647,7 @@ export default function NewGamePage() {
                   </button>
                   <button
                     onClick={() => handleAction('s')}
-                    className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors duration-200"
+                    className="px-3 py-2 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors duration-200"
                   >
                     Steal (S)
                   </button>
@@ -367,7 +698,7 @@ export default function NewGamePage() {
             </div>
           ))}
           {events.length === 0 && (
-            <p className="text-slate-500 text-center py-4">No events recorded yet. Click on the court to add events.</p>
+            <p className="text-slate-600 text-center py-4">No events recorded yet. Click on the court to add events.</p>
           )}
         </div>
       </div>
@@ -422,6 +753,18 @@ export default function NewGamePage() {
     );
   };
 
+  const renderContent = () => {
+    if (activeTab === 'game') {
+      if (gameState === 'setup') return renderGameForm();
+      if (gameState === 'active') return renderCourt();
+      if (gameState === 'ended') return renderGameSummary();
+    } else if (activeTab === 'player') {
+      return renderPlayerForm();
+    } else if (activeTab === 'season') {
+      return renderSeasonForm();
+    }
+  };
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -437,10 +780,29 @@ export default function NewGamePage() {
         </div>
       </div>
 
+      {/* Message Display */}
+      {message.text && (
+        <div className={`p-4 rounded-lg border ${
+          message.type === 'success' 
+            ? 'bg-green-50 border-green-200 text-green-800' 
+            : 'bg-red-50 border-red-200 text-red-800'
+        }`}>
+          <div className="flex items-center space-x-2">
+            {message.type === 'success' ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span>{message.text}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tabs */}
+      {renderTabs()}
+
       {/* Content */}
-      {gameState === 'setup' && renderSetup()}
-      {gameState === 'active' && renderCourt()}
-      {gameState === 'ended' && renderGameSummary()}
+      {renderContent()}
     </div>
   );
 } 
