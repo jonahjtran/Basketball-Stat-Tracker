@@ -214,7 +214,7 @@ export default function PlayerAnalyticsPage() {
         {/* Detailed Stats */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h3 className="text-xl font-semibold text-slate-900 mb-4">Detailed Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-black">
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-slate-600">Points</span>

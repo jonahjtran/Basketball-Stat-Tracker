@@ -1,70 +1,97 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { playerAPI, heatmapAPI } from '@/lib/api';
 import StatsTable from '@/components/StatsTable';
 import StatsChart from '@/components/StatsChart';
 import Heatmap from '@/components/Heatmap';
 import { ArrowLeft, User, Calendar, Target } from 'lucide-react';
 
-// Mock data for development - replace with actual API calls
-const mockPlayer = {
-  id: 1,
-  name: "LeBron James",
-  external_id: "lebron_james"
-};
-
-const mockGameStats = [
-  { id: 1, opponent: "Warriors", date: "2025-01-15", point: 28, assist: 8, steal: 2, block: 1, off_reb: 2, def_reb: 6, turnover: 3 },
-  { id: 2, opponent: "Celtics", date: "2025-01-12", point: 32, assist: 12, steal: 1, block: 2, off_reb: 1, def_reb: 8, turnover: 2 },
-  { id: 3, opponent: "Lakers", date: "2025-01-10", point: 25, assist: 6, steal: 3, block: 0, off_reb: 3, def_reb: 5, turnover: 4 },
-];
-
-const mockSeasonStats = {
-  point: 28.5,
-  assist: 8.7,
-  steal: 2.1,
-  block: 1.2,
-  off_reb: 2.3,
-  def_reb: 6.8,
-  turnover: 3.1,
-  games_played: 45
-};
-
-const mockHeatmapUrl = "https://placeholder.com/heatmap-1-1";
-
 export default function PlayerDetailPage({ params }) {
   const { id } = params;
   
-  // In production, uncomment these lines and remove mock data
-  // const player = await playerAPI.getById(id);
-  // const gameStats = await playerAPI.getGameStats(id);
-  // const seasonStats = await playerAPI.getSeasonStats(id);
-  // const heatmapData = await heatmapAPI.getHeatmap(gameId, id);
-  
-  const player = mockPlayer;
-  const gameStats = mockGameStats;
-  const seasonStats = mockSeasonStats;
-  const heatmapUrl = mockHeatmapUrl;
+  // Fetch real data from API
+  const [playerData, setPlayerData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchPlayerData() {
+      try {
+        setLoading(true);
+        const response = await fetch(`/api/players/${id}`);
+        if (!response.ok) {
+          throw new Error('Failed to fetch player data');
+        }
+        const data = await response.json();
+        setPlayerData(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchPlayerData();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading player data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Error: {error}</p>
+          <Link href="/players" className="text-orange-600 hover:text-orange-700 mt-2 inline-block">
+            Back to Players
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!playerData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600">No player data found</p>
+          <Link href="/players" className="text-orange-600 hover:text-orange-700 mt-2 inline-block">
+            Back to Players
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const { player, careerStats, gameStats } = playerData;
 
   // Prepare chart data
   const pointsChartData = gameStats.map(game => ({
-    name: game.opponent,
-    value: game.point
+    name: game.game_id?.opponent || 'Unknown',
+    value: game.point || 0
   }));
 
   const assistsChartData = gameStats.map(game => ({
-    name: game.opponent,
-    value: game.assist
+    name: game.game_id?.opponent || 'Unknown',
+    value: game.assist || 0
   }));
 
   const overallStatsData = [
-    { name: 'Points', value: seasonStats.point },
-    { name: 'Assists', value: seasonStats.assist },
-    { name: 'Steals', value: seasonStats.steal },
-    { name: 'Blocks', value: seasonStats.block },
-    { name: 'Rebounds', value: seasonStats.off_reb + seasonStats.def_reb },
-    { name: 'Turnovers', value: seasonStats.turnover },
+    { name: 'Points', value: careerStats.points || 0 },
+    { name: 'Assists', value: careerStats.assists || 0 },
+    { name: 'Steals', value: careerStats.steals || 0 },
+    { name: 'Blocks', value: careerStats.blocks || 0 },
+    { name: 'Rebounds', value: (careerStats.offensive_rebounds || 0) + (careerStats.defensive_rebounds || 0) },
+    { name: 'Turnovers', value: careerStats.turnovers || 0 },
   ];
 
   return (
@@ -93,13 +120,13 @@ export default function PlayerDetailPage({ params }) {
         </div>
       </div>
 
-      {/* Season Stats */}
+      {/* Career Stats */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <StatsTable stats={seasonStats} title="Season Statistics" />
+        <StatsTable stats={careerStats} title="Career Statistics" />
         <StatsChart 
           data={overallStatsData} 
           type="bar" 
-          title="Season Performance Overview"
+          title="Career Performance Overview"
           height={400}
         />
       </div>
@@ -124,51 +151,90 @@ export default function PlayerDetailPage({ params }) {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Recent Games</h2>
         <div className="space-y-4">
-          {gameStats.map((game) => (
-            <div key={game.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <Calendar className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <h3 className="font-semibold text-gray-900">vs {game.opponent}</h3>
-                    <p className="text-sm text-gray-500">{game.date}</p>
+          {gameStats.length > 0 ? (
+            gameStats.map((game) => (
+              <div key={game.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <Calendar className="w-5 h-5 text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold text-gray-900">vs {game.game_id?.opponent || 'Unknown'}</h3>
+                      <p className="text-sm text-gray-500">{game.game_id?.date || 'Unknown Date'}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p 
+                      className="text-2xl font-bold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.point || 0}
+                    </p>
+                    <p className="text-sm text-gray-500">points</p>
                   </div>
                 </div>
-                <div className="text-right">
-                  <p className="text-2xl font-bold text-orange-600">{game.point}</p>
-                  <p className="text-sm text-gray-500">points</p>
+                <div className="grid grid-cols-6 gap-4 text-sm">
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.assist || 0}
+                    </p>
+                    <p className="text-gray-500">Assists</p>
+                  </div>
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.steal || 0}
+                    </p>
+                    <p className="text-gray-500">Steals</p>
+                  </div>
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.block || 0}
+                    </p>
+                    <p className="text-gray-500">Blocks</p>
+                  </div>
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {(game.off_reb || 0) + (game.def_reb || 0)}
+                    </p>
+                    <p className="text-gray-500">Rebounds</p>
+                  </div>
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.turnover || 0}
+                    </p>
+                    <p className="text-gray-500">Turnovers</p>
+                  </div>
+                  <div className="text-center">
+                    <p 
+                      className="font-semibold" 
+                      style={{ color: '#111827' }}
+                    >
+                      {game.point ? ((game.point / (game.point + (game.assist || 0) + (game.steal || 0) + (game.block || 0))) * 100).toFixed(1) : 0}%
+                    </p>
+                    <p className="text-gray-500">Efficiency</p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-6 gap-4 text-sm">
-                <div className="text-center">
-                  <p className="font-semibold text-blue-600">{game.assist}</p>
-                  <p className="text-gray-500">Assists</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-green-600">{game.steal}</p>
-                  <p className="text-gray-500">Steals</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-purple-600">{game.block}</p>
-                  <p className="text-gray-500">Blocks</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-yellow-600">{game.off_reb + game.def_reb}</p>
-                  <p className="text-gray-500">Rebounds</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-red-600">{game.turnover}</p>
-                  <p className="text-gray-500">Turnovers</p>
-                </div>
-                <div className="text-center">
-                  <p className="font-semibold text-gray-600">
-                    {((game.point / (game.point + game.assist + game.steal + game.block)) * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-gray-500">Efficiency</p>
-                </div>
-              </div>
+            ))
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 text-center">
+              <p className="text-gray-500">No games found for this player</p>
             </div>
-          ))}
+          )}
         </div>
       </div>
 
@@ -176,7 +242,7 @@ export default function PlayerDetailPage({ params }) {
       <Heatmap 
         gameId={1} 
         playerId={player.id} 
-        heatmapUrl={heatmapUrl}
+        heatmapUrl={careerStats.heatmap_url}
         playerName={player.name}
       />
     </div>

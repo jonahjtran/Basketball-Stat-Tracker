@@ -95,6 +95,16 @@ def get_player_stats(request, player_id):
     serializer = PlayerCareerStatsSerializer(career)
     return Response(serializer.data)
 
+@api_view(["GET"])
+def get_player_game_stats(request, player_id):
+    """Get all game statistics for a specific player"""
+    try:
+        player_games = PlayerGame.objects.filter(player_id=player_id).select_related('game_id')
+        serializer = PlayerGameSerializer(player_games, many=True)
+        return Response(serializer.data)
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
+
 
 # DELETE endpoints
 from rest_framework import status

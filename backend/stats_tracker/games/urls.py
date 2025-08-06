@@ -40,5 +40,6 @@ urlpatterns = [
     # GET single resource endpoints
     path('games/<int:game_id>/', views.get_game, name='get_game'),
     path('players/<int:player_id>/', views.get_player, name='get_player'),
+    path('players/<int:player_id>/games/', views.get_player_game_stats, name='get_player_game_stats'),
     path('seasons/<int:season_id>/', views.get_season, name='get_season'),
 ]

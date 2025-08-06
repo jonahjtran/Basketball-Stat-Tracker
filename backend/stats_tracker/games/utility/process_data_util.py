@@ -175,7 +175,7 @@ def process_player(player_id):
     heatmap_url = upload_heatmap_to_supabase("career", player_id, image)
 
     PlayerCareer.objects.update_or_create(
-        player_id=player_id,
+        player_id_id=player_id,
         defaults= {
             **totals,
             "shot_zone_stats" : combined_shot_zones,

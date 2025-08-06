@@ -48,7 +48,10 @@ export default function StatsTable({ stats, title = "Statistics" }) {
                     </div>
                   </div>
                   <div className="flex items-center space-x-2">
-                    <span className={`text-lg font-bold ${item.color}`}>
+                    <span 
+                      className="text-lg font-bold" 
+                      style={{ color: '#111827' }}
+                    >
                       {typeof value === 'number' ? value.toFixed(1) : value}
                     </span>
                     {value > 0 && (
