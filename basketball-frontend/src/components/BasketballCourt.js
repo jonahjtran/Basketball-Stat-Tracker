@@ -23,7 +23,13 @@ export default function BasketballCourt({
     const courtX = ((x / width) * 500) - 250;
     const courtY = ((y / height) * 470) - 47.5;
     
-    onCourtClick({ x: courtX, y: courtY, screenX: x, screenY: y });
+    const clickType = e.button === 0 ? 'left' : 'right';
+    onCourtClick({ x: courtX, y: courtY, screenX: x, screenY: y }, clickType);
+  };
+
+  const handleContextMenu = (e) => {
+    e.preventDefault(); // Prevent browser context menu
+    handleClick(e);
   };
 
   // Convert court coordinates to screen coordinates
@@ -41,6 +47,8 @@ export default function BasketballCourt({
         height={height}
         viewBox="0 0 500 470"
         onClick={handleClick}
+        onContextMenu={handleContextMenu}
+        onMouseDown={handleClick}
         className={`w-full h-full ${interactive ? 'cursor-crosshair' : ''}`}
         style={{ 
           background: 'linear-gradient(to bottom, #f97316 0%, #ea580c 100%)',

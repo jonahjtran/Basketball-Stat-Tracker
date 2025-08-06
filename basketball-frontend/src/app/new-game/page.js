@@ -7,6 +7,7 @@ import BasketballCourt from '@/components/BasketballCourt';
 export default function NewGamePage() {
   const [activeTab, setActiveTab] = useState('game'); // game, player, season
   const [gameState, setGameState] = useState('setup'); // setup, active, ended
+  const [gameId, setGameId] = useState(null);
   const [gameData, setGameData] = useState({
     opponent: '',
     date: new Date().toISOString().split('T')[0],
@@ -15,6 +16,7 @@ export default function NewGamePage() {
     season_id: '',
   });
   const [seasons, setSeasons] = useState([]);
+  const [players, setPlayers] = useState([]);
   const [playerData, setPlayerData] = useState({
     name: '',
   });
@@ -24,6 +26,7 @@ export default function NewGamePage() {
     end_date: new Date().toISOString().split('T')[0],
   });
   const [currentPlayer, setCurrentPlayer] = useState('');
+  const [currentAction, setCurrentAction] = useState('');
   const [events, setEvents] = useState([]);
   const [showPlayerInput, setShowPlayerInput] = useState(false);
   const [lastClickPosition, setLastClickPosition] = useState(null);
@@ -47,17 +50,44 @@ export default function NewGamePage() {
     's': { name: 'Steal', points: 0, color: 'yellow' },
   };
 
-  const handleCourtClick = (coordinates) => {
+  const handleCourtClick = (coordinates, clickType = 'left') => {
     if (gameState !== 'active') return;
+    if (!currentPlayer) {
+      setMessage({ type: 'error', text: 'Please select a player first' });
+      return;
+    }
     
-    // coordinates contains both court coordinates (x, y) and screen coordinates (screenX, screenY)
-    setLastClickPosition({ 
-      x: coordinates.screenX, 
-      y: coordinates.screenY,
-      courtX: coordinates.x,
-      courtY: coordinates.y 
-    });
-    setShowPlayerInput(true);
+    // Handle shots with left/right click
+    if (clickType === 'left' || clickType === 'right') {
+      const action = clickType === 'left' ? actionTypes['left'] : actionTypes['right'];
+      const newEvent = {
+        id: Date.now(),
+        player: currentPlayer,
+        action: action.name,
+        points: action.points,
+        color: action.color,
+        position: { x: coordinates.screenX, y: coordinates.screenY },
+        x: coordinates.x,
+        y: coordinates.y,
+        timestamp: new Date().toISOString(),
+      };
+      setEvents([...events, newEvent]);
+    } else {
+      // For other actions, show input modal or use current action
+      setLastClickPosition({ 
+        x: coordinates.screenX, 
+        y: coordinates.screenY,
+        courtX: coordinates.x,
+        courtY: coordinates.y 
+      });
+      
+      if (currentAction) {
+        // Use the typed action
+        handleCustomAction();
+      } else {
+        setShowPlayerInput(true);
+      }
+    }
   };
 
   const handleAction = (actionType) => {
@@ -82,6 +112,49 @@ export default function NewGamePage() {
     setLastClickPosition(null);
   };
 
+  const handleQuickAction = (actionType) => {
+    if (!currentPlayer) {
+      setMessage({ type: 'error', text: 'Please select a player first' });
+      return;
+    }
+
+    const action = actionTypes[actionType];
+    const newEvent = {
+      id: Date.now(),
+      player: currentPlayer,
+      action: action.name,
+      points: action.points,
+      color: action.color,
+      position: { x: 250, y: 200 }, // Default position
+      x: 0, // Center court
+      y: 100, // Mid-court
+      timestamp: new Date().toISOString(),
+    };
+    
+    setEvents([...events, newEvent]);
+    setMessage({ type: 'success', text: `${action.name} recorded for ${currentPlayer}` });
+  };
+
+  const handleCustomAction = () => {
+    if (!currentPlayer || !currentAction) return;
+
+    const newEvent = {
+      id: Date.now(),
+      player: currentPlayer,
+      action: currentAction,
+      points: 0,
+      color: 'blue',
+      position: lastClickPosition,
+      x: lastClickPosition.courtX,
+      y: lastClickPosition.courtY,
+      timestamp: new Date().toISOString(),
+    };
+    
+    setEvents([...events, newEvent]);
+    setCurrentAction('');
+    setLastClickPosition(null);
+  };
+
   const handleKeyPress = (e) => {
     if (!showPlayerInput) return;
     
@@ -94,8 +167,73 @@ export default function NewGamePage() {
 
 
 
-  const endGame = () => {
-    setGameState('ended');
+  const endGame = async () => {
+    if (!gameId) {
+      setMessage({ type: 'error', text: 'No game ID found. Please create a game first.' });
+      return;
+    }
+
+    if (events.length === 0) {
+      setMessage({ type: 'error', text: 'No events to upload.' });
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Map action names to backend expected format
+      const actionMapping = {
+        'Made Shot': 'made_shot',
+        'Missed Shot': 'missed_shot',
+        'Offensive Rebound': 'off_reb',
+        'Defensive Rebound': 'def_reb',
+        'Steal': 'steal',
+        'Assist': 'assist',
+        'Block': 'block',
+        'Turnover': 'turnover'
+      };
+
+      // Upload all events to the backend
+      const eventsToUpload = events.map(event => {
+        // Find player ID from player name
+        const player = players.find(p => p.name === event.player);
+        const playerId = player ? player.id : null;
+        
+        if (!playerId) {
+          throw new Error(`Player ID not found for: ${event.player}`);
+        }
+
+        return {
+          player_id: playerId,
+          season_id: gameData.season_id || (seasons.length > 0 ? seasons[0].id : 12), // Use selected season or first available
+          action: actionMapping[event.action] || 'made_shot',
+          x: event.x || 0,
+          y: event.y || 0
+        };
+      });
+
+      const response = await fetch('/api/games/events/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          game_id: gameId,
+          events: eventsToUpload
+        }),
+      });
+
+      if (response.ok) {
+        setMessage({ type: 'success', text: `Game ended successfully! ${events.length} events uploaded.` });
+        setGameState('ended');
+      } else {
+        const error = await response.json();
+        setMessage({ type: 'error', text: `Failed to upload events: ${JSON.stringify(error)}` });
+      }
+    } catch (error) {
+      setMessage({ type: 'error', text: `Error uploading events: ${error.message}` });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getGameStats = () => {
@@ -202,6 +340,18 @@ export default function NewGamePage() {
     }
   };
 
+  const fetchPlayers = async () => {
+    try {
+      const response = await fetch('/api/players/');
+      if (response.ok) {
+        const data = await response.json();
+        setPlayers(data);
+      }
+    } catch (error) {
+      console.error('Error fetching players:', error);
+    }
+  };
+
   const createGame = async () => {
     if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
       setMessage({ type: 'error', text: 'Please fill in all game details' });
@@ -224,6 +374,7 @@ export default function NewGamePage() {
 
       if (response.ok) {
         const newGame = await response.json();
+        setGameId(newGame.id);
         setMessage({ type: 'success', text: `Game created successfully! Starting live tracking...` });
         // Automatically start live game tracking
         setGameState('active');
@@ -247,6 +398,7 @@ export default function NewGamePage() {
 
   useEffect(() => {
     fetchSeasons();
+    fetchPlayers();
   }, []);
 
   // Clear message after 5 seconds
@@ -493,23 +645,115 @@ export default function NewGamePage() {
         </div>
       </div>
 
-      {/* Basketball Court */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-slate-900">Basketball Court</h3>
-          <div className="text-sm text-slate-600">
-            Click anywhere on the court to record an event
+      {/* Basketball Court and Controls */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Basketball Court - Left Side */}
+        <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-slate-900">Basketball Court</h3>
+            <div className="text-sm text-slate-600">
+              Left click: Made shot | Right click: Missed shot
+            </div>
+          </div>
+          
+          <div className="relative">
+            <BasketballCourt
+              onCourtClick={handleCourtClick}
+              events={events}
+              width={500}
+              height={375}
+              interactive={true}
+            />
           </div>
         </div>
-        
-        <div className="relative">
-          <BasketballCourt
-            onCourtClick={handleCourtClick}
-            events={events}
-            width={800}
-            height={600}
-            interactive={true}
-          />
+
+        {/* Controls - Right Side */}
+        <div className="space-y-4">
+          {/* Player Selection */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h4 className="text-md font-semibold text-slate-900 mb-3">Player</h4>
+            <select
+              value={currentPlayer}
+              onChange={(e) => setCurrentPlayer(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
+              style={{ color: 'black' }}
+            >
+              <option value="">Select a player</option>
+              {players.map((player) => (
+                <option key={player.id} value={player.name} style={{ color: 'black' }}>
+                  {player.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Input */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h4 className="text-md font-semibold text-slate-900 mb-3">Action</h4>
+            <input
+              type="text"
+              value={currentAction}
+              onChange={(e) => setCurrentAction(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
+              style={{ color: 'black' }}
+              placeholder="e.g., assist, block, steal, rebound..."
+            />
+            <div className="mt-3 text-xs text-slate-500">
+              <p><strong>Keyboard shortcuts:</strong></p>
+              <p>A - Assist | B - Block | S - Steal</p>
+              <p>OF - Offensive Rebound | DF - Defensive Rebound</p>
+              <p>T - Turnover</p>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+            <h4 className="text-md font-semibold text-slate-900 mb-3">Quick Actions</h4>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => handleQuickAction('a')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Assist
+              </button>
+              <button
+                onClick={() => handleQuickAction('b')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Block
+              </button>
+              <button
+                onClick={() => handleQuickAction('s')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Steal
+              </button>
+              <button
+                onClick={() => handleQuickAction('t')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Turnover
+              </button>
+              <button
+                onClick={() => handleQuickAction('of')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Off. Rebound
+              </button>
+              <button
+                onClick={() => handleQuickAction('df')}
+                disabled={!currentPlayer}
+                className="px-3 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+              >
+                Def. Rebound
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
