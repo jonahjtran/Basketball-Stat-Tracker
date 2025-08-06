@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { BarChart3, Filter, Download, TrendingUp, Target, Trophy, Map } from 'lucide-react';
+import { BarChart3, Filter, Download, TrendingUp, Target, Trophy, Map, Trash2, AlertTriangle, X } from 'lucide-react';
 import Link from 'next/link';
 import HeatmapModal from '@/components/HeatmapModal';
 
@@ -23,6 +23,14 @@ export default function AnalyticsPage() {
     data: null,
     title: '',
     totalEvents: 0
+  });
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState({
+    isOpen: false,
+    type: '', // 'player', 'game', 'season'
+    item: null,
+    loading: false
   });
 
   useEffect(() => {
@@ -123,6 +131,63 @@ export default function AnalyticsPage() {
     });
   };
 
+  const openDeleteModal = (type, item) => {
+    setDeleteModal({
+      isOpen: true,
+      type,
+      item,
+      loading: false
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      type: '',
+      item: null,
+      loading: false
+    });
+  };
+
+  const handleDelete = async () => {
+    const { type, item } = deleteModal;
+    setDeleteModal(prev => ({ ...prev, loading: true }));
+
+    try {
+      let endpoint = '';
+      switch (type) {
+        case 'player':
+          endpoint = `http://localhost:8000/games/players/${item.id}/delete/`;
+          break;
+        case 'game':
+          endpoint = `http://localhost:8000/games/games/${item.id}/delete/`;
+          break;
+        case 'season':
+          endpoint = `http://localhost:8000/games/seasons/${item.id}/delete/`;
+          break;
+        default:
+          throw new Error('Invalid delete type');
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Refresh data after successful deletion
+        await fetchData();
+        closeDeleteModal();
+      } else {
+        throw new Error('Failed to delete item');
+      }
+    } catch (error) {
+      console.error('Error deleting item:', error);
+      alert(`Error deleting ${type}: ${error.message}`);
+    } finally {
+      setDeleteModal(prev => ({ ...prev, loading: false }));
+    }
+  };
+
   const renderPlayersView = () => (
     <div className="space-y-6">
       {loading ? (
@@ -146,6 +211,13 @@ export default function AnalyticsPage() {
                       title="Generate Heatmap"
                     >
                       <Map className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal('player', player)}
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Player"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                     <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-orange-600 rounded-lg flex items-center justify-center">
                       <Target className="w-4 h-4 text-white" />
@@ -217,6 +289,13 @@ export default function AnalyticsPage() {
                     >
                       <Map className="w-4 h-4" />
                     </button>
+                    <button
+                      onClick={() => openDeleteModal('game', game)}
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Game"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
                       <Trophy className="w-4 h-4 text-white" />
                     </div>
@@ -258,6 +337,13 @@ export default function AnalyticsPage() {
                       title="Generate Season Heatmap"
                     >
                       <Map className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => openDeleteModal('season', season)}
+                      className="p-2 text-slate-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      title="Delete Season"
+                    >
+                      <Trash2 className="w-4 h-4" />
                     </button>
                     <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-lg flex items-center justify-center">
                       <TrendingUp className="w-4 h-4 text-white" />
@@ -373,6 +459,108 @@ export default function AnalyticsPage() {
         title={heatmapModal.title}
         totalEvents={heatmapModal.totalEvents}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+            {/* Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Delete {deleteModal.type === 'player' ? 'Player' : deleteModal.type === 'game' ? 'Game' : 'Season'}
+                </h2>
+              </div>
+              <button
+                onClick={closeDeleteModal}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                disabled={deleteModal.loading}
+              >
+                <X className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-6 space-y-4">
+              <div className="text-slate-700">
+                <p className="font-medium mb-2">
+                  Are you sure you want to delete{' '}
+                  <span className="font-semibold text-slate-900">
+                    {deleteModal.item?.name || `vs ${deleteModal.item?.opponent}`}
+                  </span>
+                  ?
+                </p>
+                
+                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mt-4">
+                  <div className="flex items-start space-x-3">
+                    <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div className="text-sm text-yellow-800">
+                      <p className="font-medium mb-1">Warning: This action cannot be undone!</p>
+                      <p>
+                        Deleting this {deleteModal.type} will also permanently delete all related:
+                      </p>
+                      <ul className="list-disc list-inside mt-2 space-y-1">
+                        {deleteModal.type === 'player' && (
+                          <>
+                            <li>Player statistics and career data</li>
+                            <li>Game performances and season records</li>
+                            <li>All associated events and heatmaps</li>
+                          </>
+                        )}
+                        {deleteModal.type === 'game' && (
+                          <>
+                            <li>All player statistics for this game</li>
+                            <li>Game events and shot data</li>
+                            <li>Associated heatmaps and analytics</li>
+                          </>
+                        )}
+                        {deleteModal.type === 'season' && (
+                          <>
+                            <li>All games in this season</li>
+                            <li>Player season statistics</li>
+                            <li>Season events, heatmaps, and analytics</li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end space-x-3 p-6 border-t border-slate-200 bg-slate-50">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+                disabled={deleteModal.loading}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleteModal.loading}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+              >
+                {deleteModal.loading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4" />
+                    <span>Delete {deleteModal.type === 'player' ? 'Player' : deleteModal.type === 'game' ? 'Game' : 'Season'}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
