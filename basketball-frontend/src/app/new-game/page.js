@@ -16,11 +16,9 @@ export default function NewGamePage() {
   const [seasons, setSeasons] = useState([]);
   const [playerData, setPlayerData] = useState({
     name: '',
-    external_id: '',
   });
   const [seasonData, setSeasonData] = useState({
     name: '',
-    external_id: '',
     start_date: new Date().toISOString().split('T')[0],
     end_date: new Date().toISOString().split('T')[0],
   });
@@ -128,14 +126,14 @@ export default function NewGamePage() {
         },
         body: JSON.stringify({
           name: playerData.name,
-          external_id: playerData.external_id || playerData.name.toLowerCase().replace(/\s+/g, '_'),
+          external_id: playerData.name.toLowerCase().replace(/\s+/g, '_'),
         }),
       });
 
       if (response.ok) {
         const newPlayer = await response.json();
         setMessage({ type: 'success', text: `Player "${newPlayer.name}" created successfully!` });
-        setPlayerData({ name: '', external_id: '' });
+        setPlayerData({ name: '' });
       } else {
         const error = await response.json();
         setMessage({ type: 'error', text: `Failed to create player: ${JSON.stringify(error)}` });
@@ -162,7 +160,7 @@ export default function NewGamePage() {
         },
         body: JSON.stringify({
           name: seasonData.name,
-          external_id: seasonData.external_id || seasonData.name.toLowerCase().replace(/\s+/g, '_'),
+          external_id: seasonData.name.toLowerCase().replace(/\s+/g, '_'),
           start_date: seasonData.start_date,
           end_date: seasonData.end_date,
         }),
@@ -173,7 +171,6 @@ export default function NewGamePage() {
         setMessage({ type: 'success', text: `Season "${newSeason.name}" created successfully!` });
         setSeasonData({
           name: '',
-          external_id: '',
           start_date: new Date().toISOString().split('T')[0],
           end_date: new Date().toISOString().split('T')[0],
         });
@@ -318,18 +315,6 @@ export default function NewGamePage() {
                 placeholder="Enter player name"
               />
           </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">External ID (Optional)</label>
-                          <input
-                type="text"
-                value={playerData.external_id}
-                onChange={(e) => setPlayerData({...playerData, external_id: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
-                style={{ color: 'black' }}
-                placeholder="Enter external ID or leave blank for auto-generation"
-              />
-          </div>
         </div>
         
         <button
@@ -358,18 +343,6 @@ export default function NewGamePage() {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
                 style={{ color: 'black' }}
                 placeholder="e.g., 2023-24 Season"
-              />
-          </div>
-          
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">External ID (Optional)</label>
-                          <input
-                type="text"
-                value={seasonData.external_id}
-                onChange={(e) => setSeasonData({...seasonData, external_id: e.target.value})}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 placeholder:text-slate-500 text-black"
-                style={{ color: 'black' }}
-                placeholder="Enter external ID or leave blank for auto-generation"
               />
           </div>
           
