@@ -75,7 +75,27 @@ export default function AnalyticsPage() {
       // Fetch seasons
       const seasonsResponse = await fetch('http://localhost:8000/games/seasons/');
       const seasonsData = await seasonsResponse.json();
-      setSeasons(seasonsData);
+      
+      // Fetch stats for each season
+      const seasonsWithStats = await Promise.all(
+        seasonsData.map(async (season) => {
+          try {
+            const statsResponse = await fetch(`http://localhost:8000/games/seasons/${season.id}/stats/`);
+            const statsData = await statsResponse.json();
+            return {
+              ...season,
+              stats: statsData
+            };
+          } catch (error) {
+            console.error(`Error fetching stats for season ${season.id}:`, error);
+            return {
+              ...season,
+              stats: { games_count: 0, avg_ppg: 0 }
+            };
+          }
+        })
+      );
+      setSeasons(seasonsWithStats);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -359,11 +379,15 @@ export default function AnalyticsPage() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-green-600">--</p>
+                    <p className="text-2xl font-bold text-green-600" style={{ color: '#059669' }}>
+                      {season.stats?.games_count || 0}
+                    </p>
                     <p className="text-xs text-slate-500">Games</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-2xl font-bold text-orange-600">--</p>
+                    <p className="text-2xl font-bold text-orange-600" style={{ color: '#ea580c' }}>
+                      {season.stats?.avg_ppg || 0}
+                    </p>
                     <p className="text-xs text-slate-500">Avg PPG</p>
                   </div>
                 </div>

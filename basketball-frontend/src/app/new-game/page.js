@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Plus, Users, Clock, Target, X, CheckCircle, AlertCircle, UserPlus, Calendar, Trophy } from 'lucide-react';
+import BasketballCourt from '@/components/BasketballCourt';
 
 export default function NewGamePage() {
   const [activeTab, setActiveTab] = useState('game'); // game, player, season
@@ -46,14 +47,16 @@ export default function NewGamePage() {
     's': { name: 'Steal', points: 0, color: 'yellow' },
   };
 
-  const handleCourtClick = (e) => {
+  const handleCourtClick = (coordinates) => {
     if (gameState !== 'active') return;
     
-    const rect = courtRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    setLastClickPosition({ x, y });
+    // coordinates contains both court coordinates (x, y) and screen coordinates (screenX, screenY)
+    setLastClickPosition({ 
+      x: coordinates.screenX, 
+      y: coordinates.screenY,
+      courtX: coordinates.x,
+      courtY: coordinates.y 
+    });
     setShowPlayerInput(true);
   };
 
@@ -68,6 +71,8 @@ export default function NewGamePage() {
       points: action.points,
       color: action.color,
       position: lastClickPosition,
+      x: lastClickPosition.courtX,
+      y: lastClickPosition.courtY,
       timestamp: new Date().toISOString(),
     };
     
@@ -213,7 +218,7 @@ export default function NewGamePage() {
         body: JSON.stringify({
           opponent: gameData.opponent,
           date: gameData.date,
-          external_id: `${gameData.homeTeam}_vs_${gameData.awayTeam}_${gameData.date}`,
+          external_id: `${crypto.randomUUID()}`,
         }),
       });
 
@@ -493,59 +498,18 @@ export default function NewGamePage() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-slate-900">Basketball Court</h3>
           <div className="text-sm text-slate-600">
-            Left click: Made shot | Right click: Missed shot | Type action: b(lock), of(fensive rebound), etc.
+            Click anywhere on the court to record an event
           </div>
         </div>
         
         <div className="relative">
-          <div
-            ref={courtRef}
-            onClick={handleCourtClick}
-            className="w-full h-96 bg-gradient-to-b from-orange-100 to-orange-200 rounded-lg border-2 border-orange-300 cursor-crosshair relative overflow-hidden"
-            style={{
-              backgroundImage: `
-                radial-gradient(circle at 20% 50%, #f97316 0%, #ea580c 100%),
-                radial-gradient(circle at 80% 50%, #f97316 0%, #ea580c 100%),
-                linear-gradient(to bottom, #fed7aa 0%, #fdba74 100%)
-              `,
-              backgroundSize: '60px 60px, 60px 60px, 100% 100%',
-              backgroundPosition: '10% 50%, 90% 50%, 0 0'
-            }}
-          >
-            {/* Court markings */}
-            <div className="absolute inset-0 pointer-events-none">
-              {/* Center circle */}
-              <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 border-2 border-white rounded-full"></div>
-              
-              {/* Three-point lines */}
-              <div className="absolute top-4 left-1/2 transform -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
-              
-              {/* Free throw lines */}
-              <div className="absolute top-1/4 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white"></div>
-              <div className="absolute bottom-1/4 left-1/2 transform -translate-x-1/2 w-8 h-1 bg-white"></div>
-            </div>
-
-            {/* Event markers */}
-            {events.map((event) => (
-              <div
-                key={event.id}
-                className={`absolute w-3 h-3 rounded-full border-2 border-white transform -translate-x-1/2 -translate-y-1/2 ${
-                  event.color === 'green' ? 'bg-green-500' :
-                  event.color === 'red' ? 'bg-red-500' :
-                  event.color === 'blue' ? 'bg-blue-500' :
-                  event.color === 'orange' ? 'bg-orange-500' :
-                  event.color === 'purple' ? 'bg-purple-500' :
-                  event.color === 'yellow' ? 'bg-yellow-500' : 'bg-gray-500'
-                }`}
-                style={{
-                  left: `${event.position.x}px`,
-                  top: `${event.position.y}px`
-                }}
-                title={`${event.player}: ${event.action}`}
-              />
-            ))}
-          </div>
+          <BasketballCourt
+            onCourtClick={handleCourtClick}
+            events={events}
+            width={800}
+            height={600}
+            interactive={true}
+          />
         </div>
       </div>
 
