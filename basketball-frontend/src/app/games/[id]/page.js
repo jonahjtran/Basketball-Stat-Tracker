@@ -1,65 +1,158 @@
 'use client';
 
+import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { gameAPI, playerAPI, heatmapAPI } from '@/lib/api';
 import StatsTable from '@/components/StatsTable';
 import StatsChart from '@/components/StatsChart';
 import Heatmap from '@/components/Heatmap';
+import HeatmapModal from '@/components/HeatmapModal';
 import PlayerCard from '@/components/PlayerCard';
 import { ArrowLeft, Calendar, Users, Trophy, Target } from 'lucide-react';
 
-// Mock data for development - replace with actual API calls
-const mockGame = {
-  id: 1,
-  opponent: "Warriors",
-  date: "2025-01-15",
-  external_id: "game_001"
-};
-
-const mockPlayers = [
-  { id: 1, name: "LeBron James", external_id: "lebron_james" },
-  { id: 2, name: "Stephen Curry", external_id: "stephen_curry" },
-  { id: 3, name: "Kevin Durant", external_id: "kevin_durant" },
-  { id: 4, name: "Giannis Antetokounmpo", external_id: "giannis_antetokounmpo" },
-];
-
-const mockPlayerStats = [
-  { player_id: 1, point: 28, assist: 8, steal: 2, block: 1, off_reb: 2, def_reb: 6, turnover: 3 },
-  { player_id: 2, point: 32, assist: 12, steal: 1, block: 2, off_reb: 1, def_reb: 8, turnover: 2 },
-  { player_id: 3, point: 25, assist: 6, steal: 3, block: 0, off_reb: 3, def_reb: 5, turnover: 4 },
-  { player_id: 4, point: 18, assist: 4, steal: 1, block: 3, off_reb: 4, def_reb: 7, turnover: 1 },
-];
-
-const mockHeatmapUrl = "https://placeholder.com/heatmap-1-1";
-
 export default function GameDetailPage({ params }) {
-  const { id } = params;
+  const { id } = use(params);
   
-  // In production, uncomment these lines and remove mock data
-  // const game = await gameAPI.getById(id);
-  // const players = await gameAPI.getPlayers(id);
-  // const playerStats = await Promise.all(players.map(player => playerAPI.getGameStats(id, player.id)));
+  // State management
+  const [gameData, setGameData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   
-  const game = mockGame;
-  const players = mockPlayers;
-  const playerStats = mockPlayerStats;
-  const heatmapUrl = mockHeatmapUrl;
-
-  // Combine player data with stats
-  const playersWithStats = players.map(player => {
-    const stats = playerStats.find(stat => stat.player_id === player.id) || {};
-    return { ...player, stats };
+  // Heatmap state
+  const [heatmapModal, setHeatmapModal] = useState({
+    isOpen: false,
+    data: null,
+    title: '',
+    totalEvents: 0
   });
 
+  useEffect(() => {
+    async function fetchGameData() {
+      try {
+        setLoading(true);
+        
+        // Fetch game details
+        const gameResponse = await fetch(`http://localhost:8000/games/games/${id}/`);
+        if (!gameResponse.ok) {
+          throw new Error('Failed to fetch game data');
+        }
+        const game = await gameResponse.json();
+
+        // Fetch player game stats for this game
+        const playerStatsResponse = await fetch(`http://localhost:8000/games/games/${id}/players/`);
+        if (!playerStatsResponse.ok) {
+          throw new Error('Failed to fetch player game stats');
+        }
+        const playerStats = await playerStatsResponse.json();
+
+        setGameData({
+          game,
+          playerStats
+        });
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchGameData();
+  }, [id]);
+
+  const generateHeatmap = async (endpoint, title) => {
+    try {
+      setHeatmapModal({
+        isOpen: true,
+        data: null,
+        title: 'Generating heatmap...',
+        totalEvents: 0
+      });
+
+      const response = await fetch(`http://localhost:8000/games/${endpoint}`);
+      const data = await response.json();
+
+      if (response.ok) {
+        setHeatmapModal({
+          isOpen: true,
+          data: data.heatmap_data,
+          title: data.title || title,
+          totalEvents: data.total_events
+        });
+      } else {
+        setHeatmapModal({
+          isOpen: true,
+          data: null,
+          title: 'Error',
+          totalEvents: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error generating heatmap:', error);
+      setHeatmapModal({
+        isOpen: true,
+        data: null,
+        title: 'Error loading heatmap',
+        totalEvents: 0
+      });
+    }
+  };
+
+  const closeHeatmapModal = () => {
+    setHeatmapModal({
+      isOpen: false,
+      data: null,
+      title: '',
+      totalEvents: 0
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading game data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-red-600">Error: {error}</p>
+          <Link href="/analytics?view=games" className="text-blue-600 hover:text-blue-700 mt-2 inline-block">
+            Back to Analytics
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  if (!gameData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <p className="text-gray-600">No game data found</p>
+          <Link href="/analytics?view=games" className="text-blue-600 hover:text-blue-700 mt-2 inline-block">
+            Back to Analytics
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const { game, playerStats } = gameData;
+
   // Prepare chart data
-  const pointsChartData = playersWithStats.map(player => ({
-    name: player.name,
-    value: player.stats.point || 0
+  const pointsChartData = playerStats.map(playerStat => ({
+    name: playerStat.player_name || 'Unknown Player',
+    value: playerStat.point || 0
   }));
 
-  const assistsChartData = playersWithStats.map(player => ({
-    name: player.name,
-    value: player.stats.assist || 0
+  const assistsChartData = playerStats.map(playerStat => ({
+    name: playerStat.player_name || 'Unknown Player',
+    value: playerStat.assist || 0
   }));
 
   const formatDate = (dateString) => {
@@ -77,11 +170,11 @@ export default function GameDetailPage({ params }) {
       {/* Header */}
       <div className="flex items-center space-x-4">
         <Link 
-          href="/games" 
+          href="/analytics?view=games" 
           className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to Games</span>
+          <span>Back to Analytics</span>
         </Link>
       </div>
 
@@ -101,7 +194,7 @@ export default function GameDetailPage({ params }) {
           <div className="text-right">
             <div className="flex items-center space-x-2">
               <Users className="w-5 h-5 text-gray-400" />
-              <span className="text-lg font-semibold text-gray-900">{players.length}</span>
+              <span className="text-lg font-semibold text-gray-900">{playerStats.length}</span>
             </div>
             <p className="text-sm text-gray-500">Players</p>
           </div>
@@ -128,43 +221,43 @@ export default function GameDetailPage({ params }) {
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Player Performances</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {playersWithStats.map((player) => (
-            <div key={player.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          {playerStats.map((playerStat) => (
+            <div key={playerStat.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center space-x-3 mb-4">
                 <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
                   <Target className="w-5 h-5 text-orange-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{player.name}</h3>
-                  <p className="text-sm text-gray-500">ID: {player.external_id}</p>
+                  <h3 className="font-semibold text-gray-900">{playerStat.player_name || 'Unknown Player'}</h3>
+                  <p className="text-sm text-gray-500">Player ID: {playerStat.player_id}</p>
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-orange-600">{player.stats.point || 0}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>{playerStat.point || 0}</p>
                   <p className="text-gray-500">Points</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-blue-600">{player.stats.assist || 0}</p>
+                  <p className="text-2xl font-bold" style={{ color: '#111827' }}>{playerStat.assist || 0}</p>
                   <p className="text-gray-500">Assists</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-green-600">{player.stats.steal || 0}</p>
+                  <p className="text-lg font-semibold" style={{ color: '#111827' }}>{playerStat.steal || 0}</p>
                   <p className="text-gray-500">Steals</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-purple-600">{player.stats.block || 0}</p>
+                  <p className="text-lg font-semibold" style={{ color: '#111827' }}>{playerStat.block || 0}</p>
                   <p className="text-gray-500">Blocks</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-yellow-600">
-                    {(player.stats.off_reb || 0) + (player.stats.def_reb || 0)}
+                  <p className="text-lg font-semibold" style={{ color: '#111827' }}>
+                    {(playerStat.off_reb || 0) + (playerStat.def_reb || 0)}
                   </p>
                   <p className="text-gray-500">Rebounds</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-lg font-semibold text-red-600">{player.stats.turnover || 0}</p>
+                  <p className="text-lg font-semibold" style={{ color: '#111827' }}>{playerStat.turnover || 0}</p>
                   <p className="text-gray-500">Turnovers</p>
                 </div>
               </div>
@@ -173,8 +266,8 @@ export default function GameDetailPage({ params }) {
                 <div className="flex justify-between text-xs text-gray-500">
                   <span>Efficiency</span>
                   <span>
-                    {player.stats.point ? 
-                      ((player.stats.point / (player.stats.point + (player.stats.assist || 0) + (player.stats.steal || 0) + (player.stats.block || 0))) * 100).toFixed(1)
+                    {playerStat.point ? 
+                      ((playerStat.point / (playerStat.point + (playerStat.assist || 0) + (playerStat.steal || 0) + (playerStat.block || 0))) * 100).toFixed(1)
                       : 0}%
                   </span>
                 </div>
@@ -182,8 +275,8 @@ export default function GameDetailPage({ params }) {
                   <div 
                     className="bg-orange-600 h-2 rounded-full" 
                     style={{ 
-                      width: `${player.stats.point ? 
-                        ((player.stats.point / (player.stats.point + (player.stats.assist || 0) + (player.stats.steal || 0) + (player.stats.block || 0))) * 100)
+                      width: `${playerStat.point ? 
+                        ((playerStat.point / (playerStat.point + (playerStat.assist || 0) + (playerStat.steal || 0) + (playerStat.block || 0))) * 100)
                         : 0}%` 
                     }}
                   ></div>
@@ -197,18 +290,27 @@ export default function GameDetailPage({ params }) {
       {/* Team Heatmaps */}
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Shot Charts</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {playersWithStats.slice(0, 2).map((player) => (
-            <Heatmap 
-              key={player.id}
-              gameId={game.id} 
-              playerId={player.id} 
-              heatmapUrl={heatmapUrl}
-              playerName={player.name}
-            />
-          ))}
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <div className="flex justify-center">
+            <button 
+              onClick={() => generateHeatmap(`heatmap/game/${id}/`, `Game vs ${game.opponent} Heatmap`)}
+              className="inline-flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Trophy className="w-5 h-5" />
+              <span>Generate Game Heatmap</span>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Heatmap Modal */}
+      <HeatmapModal
+        isOpen={heatmapModal.isOpen}
+        onClose={closeHeatmapModal}
+        heatmapData={heatmapModal.data}
+        title={heatmapModal.title}
+        totalEvents={heatmapModal.totalEvents}
+      />
     </div>
   );
 } 

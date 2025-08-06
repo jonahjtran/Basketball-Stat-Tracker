@@ -46,7 +46,7 @@ def get_all_players_game(request, game_id):
 
 @api_view(["GET"])
 def get_all_players_season(request, season_id):
-    player_seasons = PlayerSeason.objects.filter(season_id=season_id)
+    player_seasons = PlayerSeason.objects.filter(season_id=season_id).select_related('player_id')
     serializer = PlayerSeasonSerializer(player_seasons, many=True)
     return Response(serializer.data)
 
@@ -205,12 +205,7 @@ def generate_player_heatmap(request, player_id):
         events = Event.objects.filter(player_id=player_id)
         
         if not events.exists():
-            # If no events for this specific player, return all events for demonstration
-            events = Event.objects.filter(
-                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
-            )
-            if not events.exists():
-                return Response({"error": "No events found for this player"}, status=404)
+            return Response({"error": f"No events found for player: {player.name}"}, status=404)
         
         try:
             heatmap = Heatmap(player_id=player_id, events=list(events))
@@ -248,13 +243,7 @@ def generate_season_heatmap(request, season_id, player_id=None):
             title = f"All Players - {season.name}"
         
         if not events.exists():
-            # If no events for this specific season, return all events for demonstration
-            events = Event.objects.filter(
-                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
-            )
-            if not events.exists():
-                return Response({"error": "No events found for this season"}, status=404)
-            title = f"All Events - {season.name}"
+            return Response({"error": f"No events found for season: {season.name}"}, status=404)
         
         heatmap = Heatmap(events=list(events))
         buf = heatmap.save_as_image()
@@ -286,13 +275,7 @@ def generate_game_heatmap(request, game_id, player_id=None):
             title = f"All Players vs {game.opponent}"
         
         if not events.exists():
-            # If no events for this specific game, return all events for demonstration
-            events = Event.objects.filter(
-                action__in=['made_two', 'made_three', 'missed_two', 'missed_three']
-            )
-            if not events.exists():
-                return Response({"error": "No events found for this game"}, status=404)
-            title = f"All Events vs {game.opponent}"
+            return Response({"error": f"No events found for game vs {game.opponent}"}, status=404)
         
         heatmap = Heatmap(events=list(events))
         buf = heatmap.save_as_image()

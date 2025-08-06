@@ -1,12 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { BarChart3, Filter, Download, TrendingUp, Target, Trophy, Map } from 'lucide-react';
 import Link from 'next/link';
 import HeatmapModal from '@/components/HeatmapModal';
 
 export default function AnalyticsPage() {
-  const [selectedView, setSelectedView] = useState('players');
+  const searchParams = useSearchParams();
+  const initialView = searchParams.get('view') || 'players';
+  
+  const [selectedView, setSelectedView] = useState(initialView);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [players, setPlayers] = useState([]);
   const [games, setGames] = useState([]);
@@ -202,7 +206,9 @@ export default function AnalyticsPage() {
             <div key={game.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">vs {game.opponent}</h3>
+                  <Link href={`/games/${game.id}`} className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 hover:text-blue-600 transition-colors cursor-pointer">vs {game.opponent}</h3>
+                  </Link>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => generateHeatmap(`heatmap/game/${game.id}/`, `All Players vs ${game.opponent}`)}
@@ -242,7 +248,9 @@ export default function AnalyticsPage() {
             <div key={season.id} className="bg-white rounded-xl border border-slate-200 shadow-sm hover:shadow-lg transition-all duration-300">
               <div className="p-6 space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-slate-900">{season.name}</h3>
+                  <Link href={`/analytics/season/${season.id}`} className="flex-1">
+                    <h3 className="text-lg font-semibold text-slate-900 hover:text-green-600 transition-colors cursor-pointer">{season.name}</h3>
+                  </Link>
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => generateHeatmap(`heatmap/season/${season.id}/`, `All Players - ${season.name}`)}

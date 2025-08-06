@@ -42,4 +42,5 @@ urlpatterns = [
     path('players/<int:player_id>/', views.get_player, name='get_player'),
     path('players/<int:player_id>/games/', views.get_player_game_stats, name='get_player_game_stats'),
     path('seasons/<int:season_id>/', views.get_season, name='get_season'),
+    path('seasons/<int:season_id>/players/', views.get_all_players_season, name='get_all_players_season'),
 ]

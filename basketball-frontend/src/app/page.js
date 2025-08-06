@@ -164,7 +164,7 @@ export default function HomePage() {
             {games.length > 0 ? (
               games.slice(0, 6).map((game, index) => (
                 <div key={game.id} className="animate-in" style={{ animationDelay: `${index * 100}ms` }}>
-                  <Link href={`/analytics?view=games&game=${game.id}`}>
+                  <Link href={`/games/${game.id}`}>
                     <GameCard game={game} />
                   </Link>
                 </div>
