@@ -11,25 +11,68 @@ export default function BasketballCourt({
 }) {
   const courtRef = useRef(null);
 
+  const COURT_BOUNDS = { minX: -250, maxX: 250, minY: -47.5, maxY: 422.5 };
+  const toHeatmapCoords = ({ x, y }) => {
+    const hx = Math.min(COURT_BOUNDS.maxX, Math.max(COURT_BOUNDS.minX, x));
+    const hy = Math.min(COURT_BOUNDS.maxY, Math.max(COURT_BOUNDS.minY, y));
+    return { x: +hx.toFixed(2), y: +hy.toFixed(2) };
+  };
+
+  const clientToSvg = (evt) => {
+    const svg = courtRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    try {
+      if (svg.getScreenCTM && svg.createSVGPoint) {
+        const pt = svg.createSVGPoint();
+        pt.x = evt.clientX;
+        pt.y = evt.clientY;
+        const ctm = svg.getScreenCTM();
+        if (ctm && ctm.inverse) {
+          const svgP = pt.matrixTransform(ctm.inverse());
+          return { x: svgP.x, y: svgP.y };
+        }
+      }
+    } catch (_) {
+      // fall through to fallback
+    }
+    const rect = svg.getBoundingClientRect();
+    const relX = evt.clientX - rect.left;
+    const relY = evt.clientY - rect.top;
+    // viewBox: -250 -47.5 500 470
+    const x = (relX / rect.width) * 500 - 250;
+    const y = (relY / rect.height) * 470 - 47.5;
+    return { x, y };
+  };
+
   const handleClick = (e) => {
-    if (!interactive || !onCourtClick) return;
+    if (!interactive) return;
+    if (!onCourtClick) {
+      console.warn('BasketballCourt: onCourtClick prop is missing.');
+      return;
+    }
+
+    const rawSvg = clientToSvg(e);
+    const { x: courtX, y: courtY } = toHeatmapCoords(rawSvg);
+
     
-    const rect = courtRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    // Convert screen coordinates to court coordinates
-    // Court coordinate system: center at (0,0), extends from -250 to 250 horizontally, -47.5 to 422.5 vertically
-    const courtX = ((x / width) * 500) - 250;
-    const courtY = ((y / height) * 470) - 47.5;
-    
-    const clickType = e.button === 0 ? 'left' : 'right';
-    onCourtClick({ x: courtX, y: courtY, screenX: x, screenY: y }, clickType);
+
+    onCourtClick({ x: courtX, y: courtY, screenX: e.clientX, screenY: e.clientY, rawSvg }, 'left');
   };
 
   const handleContextMenu = (e) => {
-    e.preventDefault(); // Prevent browser context menu
-    handleClick(e);
+    if (!interactive) return;
+    if (!onCourtClick) {
+      console.warn('BasketballCourt: onCourtClick prop is missing.');
+      return;
+    }
+    e.preventDefault();
+
+    const rawSvg = clientToSvg(e);
+    const { x: courtX, y: courtY } = toHeatmapCoords(rawSvg);
+
+    
+
+    onCourtClick({ x: courtX, y: courtY, screenX: e.clientX, screenY: e.clientY, rawSvg }, 'right');
   };
 
   // Convert court coordinates to screen coordinates
@@ -45,14 +88,15 @@ export default function BasketballCourt({
         ref={courtRef}
         width={width}
         height={height}
-        viewBox="0 0 500 470"
+        viewBox="-250 -47.5 500 470"
+        preserveAspectRatio="xMidYMid meet"
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        onMouseDown={handleClick}
         className={`w-full h-full ${interactive ? 'cursor-crosshair' : ''}`}
         style={{ 
           background: 'linear-gradient(to bottom, #f97316 0%, #ea580c 100%)',
-          borderRadius: '8px'
+          borderRadius: '8px',
+          pointerEvents: 'auto'
         }}
       >
         {/* Court background */}
@@ -70,8 +114,8 @@ export default function BasketballCourt({
           </linearGradient>
         </defs>
 
-        {/* Transform group to match heatmap coordinate system */}
-        <g transform="translate(250, 47.5)">
+        {/* Court elements - viewBox now matches heatmap coordinate system */}
+        <g>
           
           {/* Court boundaries */}
           {/* Top sideline (half-court line) */}
@@ -148,7 +192,7 @@ export default function BasketballCourt({
             fill="none" stroke="url(#lineGradient)" strokeWidth="3"
           />
 
-          Three-point line
+          {/* Three-point line */}
           {/* Left corner three vertical line */}
           <line 
             x1="-220" y1="-47.5" x2="-220" y2="92.5" 
@@ -179,14 +223,21 @@ export default function BasketballCourt({
             fill="none" stroke="url(#lineGradient)" strokeWidth="3"
           />
 
+          
+
           {/* Event markers */}
           {events.map((event, index) => {
-            const screenPos = courtToScreen(event.x || event.position?.x || 0, event.y || event.position?.y || 0);
+            // Use the event coordinates directly since we're inside the transform group
+            const eventX = event.x || event.position?.x || 0;
+            const eventY = event.y || event.position?.y || 0;
+            
+            
+            
             return (
               <circle
                 key={event.id || index}
-                cx={event.x || event.position?.x || 0}
-                cy={event.y || event.position?.y || 0}
+                cx={eventX}
+                cy={eventY}
                 r="4"
                 fill={
                   event.color === 'green' ? '#10b981' :
@@ -209,8 +260,7 @@ export default function BasketballCourt({
       
       {/* Court legend */}
       {interactive && (
-        <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-sm">
-          Click anywhere on court to record event
+    <div className="absolute bottom-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded backdrop-blur-sm" style={{ pointerEvents: 'none' }}>          Click anywhere on court to record event
         </div>
       )}
     </div>

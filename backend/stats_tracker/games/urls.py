@@ -30,6 +30,7 @@ urlpatterns = [
     # DELETE endpoints
     path('games/<int:game_id>/delete/', views.delete_game, name='delete_game'),
     path('seasons/<int:season_id>/<int:player_id>/delete/', views.delete_season, name='delete_season'),
+    path('seasons/<int:season_id>/delete/', views.delete_season_record, name='delete_season_record'),
     path('players/<int:player_id>/delete/', views.delete_player, name='delete_player'),
 
     # PATCH/PUT endpoints
@@ -42,5 +43,6 @@ urlpatterns = [
     path('players/<int:player_id>/', views.get_player, name='get_player'),
     path('players/<int:player_id>/games/', views.get_player_game_stats, name='get_player_game_stats'),
     path('seasons/<int:season_id>/', views.get_season, name='get_season'),
+    path('seasons/<int:season_id>/stats/', views.get_season_stats, name='get_season_stats'),
     path('seasons/<int:season_id>/players/', views.get_all_players_season, name='get_all_players_season'),
 ]

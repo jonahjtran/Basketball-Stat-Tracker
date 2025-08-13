@@ -61,8 +61,8 @@ export default function GameCard({ game }) {
         <div className="grid grid-cols-2 gap-4 pt-2 border-t border-slate-200">
           <div className="flex items-center space-x-2 text-sm">
             <MapPin className="w-4 h-4 text-slate-400" />
-            <span className="text-slate-500">Game ID:</span>
-            <span className="font-medium text-slate-900">{game.external_id}</span>
+            {/* <span className="text-slate-500">Game ID:</span>
+            <span className="font-medium text-slate-900">{game.external_id}</span> */}
           </div>
           
           {game.score && (

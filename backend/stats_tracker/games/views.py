@@ -122,6 +122,13 @@ def delete_season(request, season_id, player_id):
     return Response(status=204)
 
 @api_view(["DELETE"])
+def delete_season_record(request, season_id):
+    """Delete the actual Season record and all related data"""
+    season = get_object_or_404(Season, id=season_id)
+    season.delete()
+    return Response(status=204)
+
+@api_view(["DELETE"])
 def delete_player(request, player_id):
     player = get_object_or_404(Player, id=player_id)
     player.delete()
@@ -182,6 +189,37 @@ def get_season(request, season_id):
     season = get_object_or_404(Season, id=season_id)
     serializer = SeasonSerializer(season)
     return Response(serializer.data)
+
+@api_view(["GET"])
+def get_season_stats(request, season_id):
+    """Get aggregated statistics for a season"""
+    try:
+        season = get_object_or_404(Season, id=season_id)
+        
+        # Get all games in this season (through events)
+        games_in_season = Game.objects.filter(events__season_id=season_id).distinct()
+        games_count = games_in_season.count()
+        
+        # Get all player season stats for this season
+        player_seasons = PlayerSeason.objects.filter(season_id=season_id)
+        
+        # Calculate total points and games played across all players
+        total_points = sum(ps.point for ps in player_seasons)
+        total_games_played = sum(ps.games_played for ps in player_seasons)
+        
+        # Calculate average PPG (total points / total games played by all players)
+        avg_ppg = total_points / total_games_played if total_games_played > 0 else 0.0
+        
+        return Response({
+            'season_id': season_id,
+            'season_name': season.name,
+            'games_count': games_count,
+            'avg_ppg': round(avg_ppg, 1),
+            'total_points': total_points,
+            'total_games_played': total_games_played
+        })
+    except Exception as e:
+        return Response({"error": str(e)}, status=500)
 
 from django.http import HttpResponse
 from .heatmap import Heatmap

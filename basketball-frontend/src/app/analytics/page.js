@@ -189,16 +189,23 @@ export default function AnalyticsPage() {
           throw new Error('Invalid delete type');
       }
 
+      console.log('Attempting to delete:', type, item.id, 'at endpoint:', endpoint);
+      
       const response = await fetch(endpoint, {
         method: 'DELETE',
       });
 
+      console.log('Delete response status:', response.status);
+      
       if (response.ok) {
+        console.log('Delete successful, refreshing data...');
         // Refresh data after successful deletion
         await fetchData();
         closeDeleteModal();
       } else {
-        throw new Error('Failed to delete item');
+        const errorText = await response.text();
+        console.error('Delete failed:', errorText);
+        throw new Error(`Failed to delete ${type}: ${response.status} ${errorText}`);
       }
     } catch (error) {
       console.error('Error deleting item:', error);

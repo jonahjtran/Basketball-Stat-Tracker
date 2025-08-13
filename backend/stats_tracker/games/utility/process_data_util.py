@@ -1,6 +1,7 @@
 from django.db import transaction
 from django.db.models import Sum, Count
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 
 from collections import defaultdict
 from games.models import PlayerSeason, PlayerGame, Event, ShotZone, Game, Player, PlayerCareer
@@ -10,8 +11,25 @@ from .supabase_utility import upload_heatmap_to_supabase
 
 def process_game(events, game_id):
     player_game = defaultdict(list)
-
+    
+    # First, save all events to the Event model (avoid duplicates)
     for event_data in events:
+        try:
+            # Create the event directly since the save() method modifies the action field
+            event = Event.objects.create(
+                player_id=event_data['player_id'],
+                game_id=game_id,
+                season_id=event_data['season_id'],
+                action=event_data['action'],
+                x=event_data['x'],
+                y=event_data['y'],
+                timestamp=timezone.now()
+            )
+            print(f"Created new event: {event.action} for player {event.player} in game {event.game}")
+        except Exception as e:
+            print(f"Error creating event: {e}")
+            print(f"Event data: {event_data}")
+            raise
         player_game[event_data['player_id']].append(event_data)
 
     for player_id, evts in player_game.items():
@@ -69,17 +87,21 @@ def process_game(events, game_id):
                     "heatmap_url": heatmap_url,
                 },
             )
-        # For now, skip process_season since it might have similar issues
-        # process_season(player_id, Game.objects.get(id=game_id).season_id_id)
+        # Update season stats for this player using the season_id from events
+        season_id = evts[0]['season_id'] if evts else None
+        if season_id:
+            process_season(player_id, season_id)
 
 def process_season(player_id, season_id):
     # get PlayerGame rows for specific player and season
+    # Since games aren't directly linked to seasons, we need to find games through events
+    game_ids_in_season = Event.objects.filter(season=season_id).values_list('game', flat=True).distinct()
     player_games = PlayerGame.objects.filter(
-        player_id = player_id,
-        game_id__season_id = season_id
+        player_id=player_id,
+        game_id__in=game_ids_in_season
     )
 
-    totals = player_games.aggregate(
+    aggregated = player_games.aggregate(
         # basic statistics
         points = Sum("point"),
         assists = Sum("assist"),
@@ -90,6 +112,18 @@ def process_season(player_id, season_id):
         def_rebs = Sum("def_reb"),
         games_played = Count("id"),
     )
+    
+    # Map aggregated results to model field names
+    totals = {
+        "point": aggregated["points"] or 0,
+        "assist": aggregated["assists"] or 0,
+        "block": aggregated["blocks"] or 0,
+        "steal": aggregated["steals"] or 0,
+        "turnover": aggregated["turnovers"] or 0,
+        "off_reb": aggregated["off_rebs"] or 0,
+        "def_reb": aggregated["def_rebs"] or 0,
+        "games_played": aggregated["games_played"] or 0,
+    }
 
     # zone stats
     combined_shot_zones = {}
@@ -117,17 +151,16 @@ def process_season(player_id, season_id):
     #     "turnover_per_game": (totals["turnovers"] or 0) / gp,
     # }
 
-    events = list(Event.objects.filter(player_id=player_id, game_id__season_id=season_id))
+    events = list(Event.objects.filter(player_id=player_id, season_id=season_id))
     heatmap = Heatmap(player_id, events)
     image = heatmap.save_as_image()
     heatmap_url = upload_heatmap_to_supabase(season_id, player_id, image)
 
     PlayerSeason.objects.update_or_create(
-        player_id=player_id,
-        season_id=season_id,
+        player_id_id=player_id,
+        season_id_id=season_id,
         defaults={
             **totals,
-            "games_played" : totals["games_played"] or 0,
             "shot_zone_stats": combined_shot_zones,
             "heatmap_url": heatmap_url,
         },

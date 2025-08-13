@@ -10,7 +10,8 @@ class EventSerializer(serializers.Serializer):
     def validate_action(self, value):
         valid_actions = [
             "made_shot", "missed_shot", "off_reb", "def_reb",
-            "steal", "assist", "block", "turnover"
+            "steal", "assist", "block", "turnover",
+            "made_two", "made_three", "missed_two", "missed_three"
         ]
         if value not in valid_actions:
             raise serializers.ValidationError("Invalid action type.")

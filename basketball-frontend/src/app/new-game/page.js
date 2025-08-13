@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Plus, Users, Clock, Target, X, CheckCircle, AlertCircle, UserPlus, Calendar, Trophy } from 'lucide-react';
 import BasketballCourt from '@/components/BasketballCourt';
 
+const API = 'http://localhost:8000'
 export default function NewGamePage() {
   const [activeTab, setActiveTab] = useState('game'); // game, player, season
   const [gameState, setGameState] = useState('setup'); // setup, active, ended
@@ -15,6 +16,7 @@ export default function NewGamePage() {
     awayTeam: '',
     season_id: '',
   });
+  const [selectedSeasonId, setSelectedSeasonId] = useState('');
   const [seasons, setSeasons] = useState([]);
   const [players, setPlayers] = useState([]);
   const [playerData, setPlayerData] = useState({
@@ -50,6 +52,29 @@ export default function NewGamePage() {
     's': { name: 'Steal', points: 0, color: 'yellow' },
   };
 
+  // Function to determine if a shot is a 3-pointer based on court position
+  // Uses the same logic as the backend shotzone.py
+  const isThreePointShot = (x, y) => {
+    const THREE_POINT_RADIUS = 237.5;  // 23'9"
+    const THREE_CORNER_X = 220;        // corner 3 x
+    const THREE_CORNER_Y = 92.5;       // corner 3 y
+    
+    // Calculate distance from hoop (0, 0)
+    const r = Math.hypot(x, y);
+    
+    // 1) Corner threes first (independent of distance)
+    if (Math.abs(x) >= THREE_CORNER_X && y <= THREE_CORNER_Y) {
+      return true;
+    }
+    
+    // 2) Above-the-break three if outside the 23'9" arc
+    if (r >= THREE_POINT_RADIUS) {
+      return true;
+    }
+    
+    return false;
+  };
+
   const handleCourtClick = (coordinates, clickType = 'left') => {
     if (gameState !== 'active') return;
     if (!currentPlayer) {
@@ -59,19 +84,47 @@ export default function NewGamePage() {
     
     // Handle shots with left/right click
     if (clickType === 'left' || clickType === 'right') {
-      const action = clickType === 'left' ? actionTypes['left'] : actionTypes['right'];
+      const isMade = clickType === 'left';
+      const isThreePointer = isThreePointShot(coordinates.x, coordinates.y);
+      
+      // Debug logging
+      const r = Math.hypot(coordinates.x, coordinates.y);
+      const isCornerThree = Math.abs(coordinates.x) >= 220 && coordinates.y <= 92.5;
+      const isAboveBreakThree = r >= 237.5;
+      
+      console.log('Shot Debug:', {
+        coordinates: { x: coordinates.x, y: coordinates.y },
+        distance: r,
+        isThreePointer,
+        isCornerThree,
+        isAboveBreakThree,
+        threePointRadius: 237.5,
+        cornerBounds: { x: 220, y: 92.5 }
+      });
+      
+      const points = isMade ? (isThreePointer ? 3 : 2) : 0;
+      const actionName = isMade ? 
+        (isThreePointer ? 'Made 3-Point Shot' : 'Made Shot') : 
+        (isThreePointer ? 'Missed 3-Point Shot' : 'Missed Shot');
+      
       const newEvent = {
         id: Date.now(),
         player: currentPlayer,
-        action: action.name,
-        points: action.points,
-        color: action.color,
+        action: actionName,
+        points: points,
+        color: isMade ? 'green' : 'red',
         position: { x: coordinates.screenX, y: coordinates.screenY },
         x: coordinates.x,
         y: coordinates.y,
         timestamp: new Date().toISOString(),
       };
       setEvents([...events, newEvent]);
+      
+      // Show success message
+      setMessage({ 
+        type: 'success', 
+        text: `${actionName} recorded for ${currentPlayer} (${points} points)` 
+      });
     } else {
       // For other actions, show input modal or use current action
       setLastClickPosition({ 
@@ -168,6 +221,8 @@ export default function NewGamePage() {
 
 
   const endGame = async () => {
+    console.log('Ending game with:', { gameId, eventsCount: events.length, events });
+    
     if (!gameId) {
       setMessage({ type: 'error', text: 'No game ID found. Please create a game first.' });
       return;
@@ -178,12 +233,30 @@ export default function NewGamePage() {
       return;
     }
 
+    if (seasons.length === 0) {
+      setMessage({ type: 'error', text: 'No seasons available. Please create a season first.' });
+      return;
+    }
+
+    if (!selectedSeasonId) {
+      setMessage({ type: 'error', text: 'Please select a season for tracking events.' });
+      return;
+    }
+
     setLoading(true);
     try {
-      // Map action names to backend expected format
-      const actionMapping = {
-        'Made Shot': 'made_shot',
-        'Missed Shot': 'missed_shot',
+      // Map UI event to backend action code (matches backend expected values)
+      const mapShotAction = (evt) => {
+        const made = evt.action.startsWith('Made');
+        // Trust label or recompute from coords (safer)
+        const three = evt.action.includes('3-Point') || isThreePointShot(evt.x, evt.y);
+        if (made && three) return 'made_three';
+        if (made && !three) return 'made_two';
+        if (!made && three) return 'missed_three';
+        return 'missed_two';
+      };
+
+      const nonShotMap = {
         'Offensive Rebound': 'off_reb',
         'Defensive Rebound': 'def_reb',
         'Steal': 'steal',
@@ -202,32 +275,58 @@ export default function NewGamePage() {
           throw new Error(`Player ID not found for: ${event.player}`);
         }
 
+        // Use selected season or first available season
+        const seasonId = selectedSeasonId || (seasons.length > 0 ? seasons[0].id : null);
+        
+        if (!seasonId) {
+          throw new Error('No season selected. Please select a season for tracking events.');
+        }
+
+        let actionCode;
+        if (event.action.startsWith('Made') || event.action.startsWith('Missed')) {
+          actionCode = mapShotAction(event);
+        } else {
+          actionCode = nonShotMap[event.action] ?? 'turnover';
+        }
+        
         return {
           player_id: playerId,
-          season_id: gameData.season_id || (seasons.length > 0 ? seasons[0].id : 12), // Use selected season or first available
-          action: actionMapping[event.action] || 'made_shot',
+          season_id: seasonId,
+          action: actionCode,
           x: event.x || 0,
           y: event.y || 0
         };
       });
 
-      const response = await fetch('/api/games/events/', {
+      console.log('Available seasons:', seasons);
+      console.log('Uploading events to backend:', eventsToUpload);
+      
+      const response = await fetch(`${API}/games/events/${gameId}/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          game_id: gameId,
           events: eventsToUpload
         }),
       });
 
+      console.log('Upload response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Upload successful:', result);
         setMessage({ type: 'success', text: `Game ended successfully! ${events.length} events uploaded.` });
         setGameState('ended');
       } else {
-        const error = await response.json();
-        setMessage({ type: 'error', text: `Failed to upload events: ${JSON.stringify(error)}` });
+        let errorPayload;
+        try {
+          errorPayload = await response.json();
+        } catch {
+          errorPayload = { error: 'Server returned non-JSON response', details: await response.text(), status: response.status };
+        }
+        console.error('Upload failed:', errorPayload);
+        setMessage({ type: 'error', text: `Failed to upload events: ${JSON.stringify(errorPayload)}` });
       }
     } catch (error) {
       setMessage({ type: 'error', text: `Error uploading events: ${error.message}` });
@@ -353,6 +452,8 @@ export default function NewGamePage() {
   };
 
   const createGame = async () => {
+    console.log('Creating game with data:', gameData);
+    
     if (!gameData.opponent || !gameData.homeTeam || !gameData.awayTeam) {
       setMessage({ type: 'error', text: 'Please fill in all game details' });
       return;
@@ -360,26 +461,34 @@ export default function NewGamePage() {
 
     setLoading(true);
     try {
+      const gamePayload = {
+        opponent: gameData.opponent,
+        date: gameData.date,
+        external_id: `${crypto.randomUUID()}`,
+      };
+      
+      console.log('Sending game payload:', gamePayload);
+      
       const response = await fetch('/api/games/', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          opponent: gameData.opponent,
-          date: gameData.date,
-          external_id: `${crypto.randomUUID()}`,
-        }),
+        body: JSON.stringify(gamePayload),
       });
 
+      console.log('Game creation response status:', response.status);
+      
       if (response.ok) {
         const newGame = await response.json();
+        console.log('Game created successfully:', newGame);
         setGameId(newGame.id);
         setMessage({ type: 'success', text: `Game created successfully! Starting live tracking...` });
         // Automatically start live game tracking
         setGameState('active');
       } else {
         const error = await response.json();
+        console.error('Game creation failed:', error);
         setMessage({ type: 'error', text: `Failed to create game: ${JSON.stringify(error)}` });
       }
     } catch (error) {
@@ -667,25 +776,43 @@ export default function NewGamePage() {
           </div>
         </div>
 
-        {/* Controls - Right Side */}
-        <div className="space-y-4">
-          {/* Player Selection */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-            <h4 className="text-md font-semibold text-slate-900 mb-3">Player</h4>
-            <select
-              value={currentPlayer}
-              onChange={(e) => setCurrentPlayer(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
-              style={{ color: 'black' }}
-            >
-              <option value="">Select a player</option>
-              {players.map((player) => (
-                <option key={player.id} value={player.name} style={{ color: 'black' }}>
-                  {player.name}
-                </option>
-              ))}
-            </select>
-          </div>
+                 {/* Controls - Right Side */}
+         <div className="space-y-4">
+           {/* Season Selection */}
+           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+             <h4 className="text-md font-semibold text-slate-900 mb-3">Season</h4>
+             <select
+               value={selectedSeasonId}
+               onChange={(e) => setSelectedSeasonId(e.target.value)}
+               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
+               style={{ color: 'black' }}
+             >
+               <option value="">Select a season</option>
+               {seasons.map((season) => (
+                 <option key={season.id} value={season.id} style={{ color: 'black' }}>
+                   {season.name}
+                 </option>
+               ))}
+             </select>
+           </div>
+
+           {/* Player Selection */}
+           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+             <h4 className="text-md font-semibold text-slate-900 mb-3">Player</h4>
+             <select
+               value={currentPlayer}
+               onChange={(e) => setCurrentPlayer(e.target.value)}
+               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
+               style={{ color: 'black' }}
+             >
+               <option value="">Select a player</option>
+               {players.map((player) => (
+                 <option key={player.id} value={player.name} style={{ color: 'black' }}>
+                   {player.name}
+                 </option>
+               ))}
+             </select>
+           </div>
 
           {/* Action Input */}
           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
@@ -881,7 +1008,7 @@ export default function NewGamePage() {
     const totalPoints = Object.values(stats).reduce((sum, player) => sum + player.points, 0);
     
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 text-black">
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <h2 className="text-2xl font-bold text-slate-900 mb-6">Game Summary</h2>
           
