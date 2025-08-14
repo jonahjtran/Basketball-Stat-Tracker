@@ -50,17 +50,50 @@ export default function AnalyticsPage() {
         playersData.map(async (player) => {
           try {
             const statsResponse = await fetch(`http://localhost:8000/games/player-stats/${player.id}/`);
-            const statsData = await statsResponse.json();
-            return {
-              ...player,
-              stats: statsData
-            };
+            let statsData = await statsResponse.json();
+
+            if (!statsResponse.ok || statsData?.error) {
+              // Fallback: derive career-like totals from all PlayerGame rows
+              const gamesResp = await fetch(`http://localhost:8000/games/players/${player.id}/games/`);
+              const gamesData = await gamesResp.json();
+              const totals = (gamesData || []).reduce((acc, g) => {
+                acc.point += (g.point ?? g.points ?? 0);
+                acc.assist += (g.assist ?? g.assists ?? 0);
+                acc.steal += (g.steal ?? g.steals ?? 0);
+                acc.block += (g.block ?? g.blocks ?? 0);
+                acc.off_reb += (g.off_reb ?? g.offensive_rebounds ?? 0);
+                acc.def_reb += (g.def_reb ?? g.defensive_rebounds ?? 0);
+                acc.turnover += (g.turnover ?? g.turnovers ?? 0);
+                acc.games_played += 1;
+                return acc;
+              }, { point: 0, assist: 0, steal: 0, block: 0, off_reb: 0, def_reb: 0, turnover: 0, games_played: 0 });
+
+              const gp = totals.games_played || 0;
+              statsData = {
+                games_played: gp,
+                points: totals.point,
+                assists: totals.assist,
+                steals: totals.steal,
+                blocks: totals.block,
+                offensive_rebounds: totals.off_reb,
+                defensive_rebounds: totals.def_reb,
+                turnovers: totals.turnover,
+                averages: gp > 0 ? {
+                  ppg: Math.round((totals.point / gp) * 10) / 10,
+                  apg: Math.round((totals.assist / gp) * 10) / 10,
+                  spg: Math.round((totals.steal / gp) * 10) / 10,
+                  bpg: Math.round((totals.block / gp) * 10) / 10,
+                  off_reb_per_game: Math.round((totals.off_reb / gp) * 10) / 10,
+                  def_reb_per_game: Math.round((totals.def_reb / gp) * 10) / 10,
+                  turnovers_per_game: Math.round((totals.turnover / gp) * 10) / 10,
+                } : {}
+              };
+            }
+
+            return { ...player, stats: statsData };
           } catch (error) {
             console.error(`Error fetching stats for player ${player.id}:`, error);
-            return {
-              ...player,
-              stats: null
-            };
+            return { ...player, stats: null };
           }
         })
       );

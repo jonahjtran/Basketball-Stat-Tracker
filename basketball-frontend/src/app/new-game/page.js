@@ -16,7 +16,6 @@ export default function NewGamePage() {
     awayTeam: '',
     season_id: '',
   });
-  const [selectedSeasonId, setSelectedSeasonId] = useState('');
   const [seasons, setSeasons] = useState([]);
   const [players, setPlayers] = useState([]);
   const [playerData, setPlayerData] = useState({
@@ -233,13 +232,9 @@ export default function NewGamePage() {
       return;
     }
 
-    if (seasons.length === 0) {
-      setMessage({ type: 'error', text: 'No seasons available. Please create a season first.' });
-      return;
-    }
-
-    if (!selectedSeasonId) {
-      setMessage({ type: 'error', text: 'Please select a season for tracking events.' });
+    // Do not require choosing a season here; we will use the season selected during game setup
+    if (!gameData.season_id) {
+      setMessage({ type: 'error', text: 'This game does not have a season selected. Please select a season during game setup.' });
       return;
     }
 
@@ -275,13 +270,6 @@ export default function NewGamePage() {
           throw new Error(`Player ID not found for: ${event.player}`);
         }
 
-        // Use selected season or first available season
-        const seasonId = selectedSeasonId || (seasons.length > 0 ? seasons[0].id : null);
-        
-        if (!seasonId) {
-          throw new Error('No season selected. Please select a season for tracking events.');
-        }
-
         let actionCode;
         if (event.action.startsWith('Made') || event.action.startsWith('Missed')) {
           actionCode = mapShotAction(event);
@@ -291,7 +279,7 @@ export default function NewGamePage() {
         
         return {
           player_id: playerId,
-          season_id: seasonId,
+          season_id: gameData.season_id,
           action: actionCode,
           x: event.x || 0,
           y: event.y || 0
@@ -458,13 +446,18 @@ export default function NewGamePage() {
       setMessage({ type: 'error', text: 'Please fill in all game details' });
       return;
     }
-
+    if (!gameData.season_id) {
+      setMessage({ type: 'error', text: 'Please select a season' });
+      return;
+    }
+    
     setLoading(true);
     try {
       const gamePayload = {
         opponent: gameData.opponent,
         date: gameData.date,
         external_id: `${crypto.randomUUID()}`,
+        season_id: gameData.season_id,
       };
       
       console.log('Sending game payload:', gamePayload);
@@ -677,14 +670,14 @@ export default function NewGamePage() {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">Season (Optional)</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Season</label>
             <select
               value={gameData.season_id}
               onChange={(e) => setGameData({...gameData, season_id: e.target.value})}
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
               style={{ color: 'black' }}
             >
-              <option value="">Select a season (optional)</option>
+              <option value="" disabled>Select a season</option>
               {seasons.map((season) => (
                 <option key={season.id} value={season.id} style={{ color: 'black' }}>
                   {season.name}
@@ -755,7 +748,7 @@ export default function NewGamePage() {
       </div>
 
       {/* Basketball Court and Controls */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Basketball Court - Left Side */}
         <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
@@ -776,25 +769,9 @@ export default function NewGamePage() {
           </div>
         </div>
 
-                 {/* Controls - Right Side */}
+         {/* Controls - Right Side */}
          <div className="space-y-4">
-           {/* Season Selection */}
-           <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
-             <h4 className="text-md font-semibold text-slate-900 mb-3">Season</h4>
-             <select
-               value={selectedSeasonId}
-               onChange={(e) => setSelectedSeasonId(e.target.value)}
-               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-black"
-               style={{ color: 'black' }}
-             >
-               <option value="">Select a season</option>
-               {seasons.map((season) => (
-                 <option key={season.id} value={season.id} style={{ color: 'black' }}>
-                   {season.name}
-                 </option>
-               ))}
-             </select>
-           </div>
+           {/* Season selection removed from tracking UI (season is chosen during game setup) */}
 
            {/* Player Selection */}
            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
